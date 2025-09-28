@@ -48,6 +48,6 @@ export function initTracing() {
 
   sdk.start();
   console.log(`OpenTelemetry tracing initialized for ${serviceName}`);
-  
+
   return trace.getTracer(serviceName);
 }

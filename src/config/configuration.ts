@@ -1,7 +1,7 @@
 export default () => ({
   port: parseInt(process.env.PORT, 10) || 3000,
   node_env: process.env.NODE_ENV || 'development',
-  
+
   logging: {
     level: process.env.LOG_LEVEL || 'info',
     prettyPrint: process.env.LOG_PRETTY === 'true',

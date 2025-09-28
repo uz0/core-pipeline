@@ -25,13 +25,13 @@ export class TracingMiddleware implements NestMiddleware {
       res.on('finish', () => {
         span.setAttribute('http.status_code', res.statusCode);
         span.setAttribute('http.response.size', res.get('content-length') || 0);
-        
+
         if (res.statusCode >= 400) {
           span.setStatus({ code: SpanStatusCode.ERROR });
         } else {
           span.setStatus({ code: SpanStatusCode.OK });
         }
-        
+
         span.end();
       });
 

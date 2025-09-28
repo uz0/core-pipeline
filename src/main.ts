@@ -1,12 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { Logger } from 'pino';
 import { initTracing } from './telemetry/tracing';
 import { LoggerService } from './services/logger.service';
 
 async function bootstrap() {
-  const tracer = initTracing();
+  initTracing();
 
   const app = await NestFactory.create(AppModule, {
     logger: new LoggerService(),

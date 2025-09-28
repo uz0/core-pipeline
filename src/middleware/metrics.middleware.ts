@@ -12,13 +12,8 @@ export class MetricsMiddleware implements NestMiddleware {
     res.on('finish', () => {
       const duration = Date.now() - startTime;
       const route = req.route?.path || req.path || 'unknown';
-      
-      this.metricsService.recordHttpRequest(
-        req.method,
-        route,
-        res.statusCode,
-        duration,
-      );
+
+      this.metricsService.recordHttpRequest(req.method, route, res.statusCode, duration);
 
       if (res.statusCode >= 400) {
         this.metricsService.recordHttpError(
