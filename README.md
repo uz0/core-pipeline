@@ -34,14 +34,50 @@ A production-ready NestJS REST API with full observability stack including Prome
 - Docker (for containerization)
 - Kubernetes cluster (for deployment)
 
-### Installation
+### Quick Start
 
+#### Automated Setup (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/uz0/core-pipeline.git
+cd core-pipeline
+
+# Run the setup script
+./setup.sh
+```
+
+The setup script will:
+- Check prerequisites (Node.js 20+, npm 10+)
+- Install dependencies
+- Create .env file
+- Build the application
+- Run tests
+- Optionally build Docker image
+
+#### Manual Setup
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/uz0/core-pipeline.git
+cd core-pipeline
+```
+
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-### Running the application
+3. **Configure environment**
+```bash
+# Copy the example environment file
+cp .env.example .env
 
+# Edit .env with your configuration
+# For local development, the defaults should work
+```
+
+4. **Run the application**
 ```bash
 # Development mode with hot reload
 npm run start:dev
@@ -52,6 +88,12 @@ npm run start:prod
 # Debug mode
 npm run start:debug
 ```
+
+5. **Access the application**
+- API: http://localhost:3000
+- Health check: http://localhost:3000/health
+- Swagger docs: http://localhost:3000/api-docs
+- Metrics: http://localhost:3000/metrics
 
 ### Testing
 
@@ -121,6 +163,7 @@ The application uses environment variables for configuration. All settings have 
 | `TRACING_ENABLED` | `true` | Enable OpenTelemetry tracing |
 | `OTEL_SERVICE_NAME` | `core-pipeline` | Service name for traces |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | OTLP endpoint |
+| `SERVICE_VERSION` | `1.0.0` | Service version for tracing |
 
 ### External Services Configuration
 
@@ -155,40 +198,71 @@ The application uses environment variables for configuration. All settings have 
 ### Building the image
 
 ```bash
-docker build -t ghcr.io/<your-org>/core-pipeline:latest .
+# Build for local testing
+docker build -t core-pipeline:latest .
+
+# Build for GitHub Container Registry
+docker build -t ghcr.io/uz0/core-pipeline:latest .
 ```
 
 ### Running with Docker
 
 ```bash
+# Run with default configuration
+docker run -p 3000:3000 core-pipeline:latest
+
+# Run with environment variables
 docker run -p 3000:3000 \
   -e NODE_ENV=production \
   -e LOG_LEVEL=info \
-  ghcr.io/<your-org>/core-pipeline:latest
+  ghcr.io/uz0/core-pipeline:latest
+
+# Run with .env file
+docker run -p 3000:3000 \
+  --env-file .env \
+  ghcr.io/uz0/core-pipeline:latest
 ```
 
 ### Multi-platform build
 
 ```bash
+# Create and use buildx builder
+docker buildx create --use
+
+# Build and push multi-platform image
 docker buildx build --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/<your-org>/core-pipeline:latest \
+  -t ghcr.io/uz0/core-pipeline:latest \
   --push .
 ```
 
 ## Kubernetes Deployment
 
-### Using Helm
+The Helm charts for this application are maintained in a separate repository: [core-charts](https://github.com/uz0/core-charts)
+
+### ArgoCD Deployment
+
+This application is deployed using ArgoCD. The ArgoCD Application manifests are available in the core-charts repository:
+- Development: `dev-core-pipeline.yaml`
+- Production: `prod-core-pipeline.yaml`
+
+### Manual Helm Deployment
 
 ```bash
+# Clone the charts repository
+git clone https://github.com/uz0/core-charts.git
+cd core-charts
+
 # Install to development environment
-helm install core-pipeline ./charts \
-  -f charts/values-dev.yaml \
-  --namespace development
+helm install core-pipeline ./charts/core-pipeline \
+  -f ./charts/core-pipeline/values-dev.yaml \
+  --namespace dev-core \
+  --create-namespace
 
 # Install to production environment
-helm install core-pipeline ./charts \
-  -f charts/values-prod.yaml \
-  --namespace production
+helm install core-pipeline ./charts/core-pipeline \
+  -f ./charts/core-pipeline/values-prod.yaml \
+  --namespace prod-core \
+  --create-namespace
 ```
 
 ### Health Probes
@@ -213,16 +287,24 @@ The GitHub Actions workflow (`.github/workflows/ci-cd.yaml`) provides:
    - Tags images appropriately
 
 3. **Deploy**: Separate jobs for dev and prod environments
-   - Updates Helm values with new image tags
-   - Triggers ArgoCD sync (when configured)
+   - Updates Helm values in core-charts repository
+   - Creates GitHub deployment records
+   - ArgoCD automatically syncs the changes
 
 ### Required GitHub Secrets
 
-The pipeline uses GitHub's built-in `GITHUB_TOKEN` for GHCR authentication. No additional secrets are required for basic operation.
+The pipeline uses GitHub's built-in `GITHUB_TOKEN` for:
+- GHCR (GitHub Container Registry) authentication
+- Updating the core-charts repository
 
-For production deployments, you may want to add:
-- `ARGOCD_TOKEN` - For triggering ArgoCD syncs
+**Note**: Ensure the `GITHUB_TOKEN` has write permissions to the core-charts repository.
+
+### Optional Secrets
+
+For enhanced deployments, you may want to add:
+- `ARGOCD_TOKEN` - For triggering ArgoCD syncs programmatically
 - `SLACK_WEBHOOK` - For deployment notifications
+- `CHARTS_DEPLOY_KEY` - If using a separate deploy key for core-charts repository
 
 ## Observability
 

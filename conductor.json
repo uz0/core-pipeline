@@ -1,0 +1,118 @@
+{
+  "name": "core-pipeline",
+  "description": "NestJS REST API with full observability stack",
+  "version": "1.0.0",
+  "setup": {
+    "prerequisites": [
+      "Node.js 20+",
+      "npm 10+",
+      "Docker",
+      "Kubernetes (optional for deployment)"
+    ],
+    "steps": [
+      {
+        "name": "Install dependencies",
+        "command": "npm install",
+        "description": "Install all npm packages required for the application"
+      },
+      {
+        "name": "Setup environment",
+        "command": "cp .env.example .env",
+        "description": "Create local environment configuration file"
+      },
+      {
+        "name": "Build application",
+        "command": "npm run build",
+        "description": "Build TypeScript to JavaScript"
+      }
+    ]
+  },
+  "development": {
+    "start": "npm run start:dev",
+    "build": "npm run build",
+    "test": "npm test",
+    "lint": "npm run lint",
+    "format": "npm run format"
+  },
+  "docker": {
+    "build": "docker build -t core-pipeline:latest .",
+    "run": "docker run -p 3000:3000 --env-file .env core-pipeline:latest",
+    "push": "docker push ghcr.io/uz0/core-pipeline:latest"
+  },
+  "deployment": {
+    "environments": {
+      "development": {
+        "namespace": "dev-core",
+        "values": "values-dev.yaml",
+        "argocd_app": "dev-core-pipeline"
+      },
+      "production": {
+        "namespace": "prod-core",
+        "values": "values-prod.yaml",
+        "argocd_app": "prod-core-pipeline"
+      }
+    },
+    "charts_repository": "https://github.com/uz0/core-charts"
+  },
+  "services": {
+    "main": {
+      "port": 3000,
+      "endpoints": [
+        {
+          "path": "/",
+          "description": "Root endpoint"
+        },
+        {
+          "path": "/health",
+          "description": "Health check with system metrics"
+        },
+        {
+          "path": "/health/liveness",
+          "description": "Kubernetes liveness probe"
+        },
+        {
+          "path": "/health/readiness",
+          "description": "Kubernetes readiness probe"
+        },
+        {
+          "path": "/ok",
+          "description": "Simple status check"
+        },
+        {
+          "path": "/metrics",
+          "description": "Prometheus metrics"
+        },
+        {
+          "path": "/api-docs",
+          "description": "Swagger API documentation"
+        }
+      ]
+    }
+  },
+  "observability": {
+    "metrics": {
+      "enabled": true,
+      "endpoint": "/metrics",
+      "format": "prometheus"
+    },
+    "logging": {
+      "enabled": true,
+      "format": "json",
+      "library": "pino"
+    },
+    "tracing": {
+      "enabled": true,
+      "protocol": "otlp",
+      "library": "opentelemetry"
+    }
+  },
+  "ci_cd": {
+    "provider": "github_actions",
+    "registry": "ghcr.io",
+    "deployment": "argocd",
+    "branches": {
+      "develop": "development",
+      "main": "production"
+    }
+  }
+}
