@@ -9,7 +9,7 @@ describe('MetricsService', () => {
   beforeEach(() => {
     // Clear the default registry before each test
     promClient.register.clear();
-    
+
     configService = {
       get: jest.fn((key) => {
         const config = {
