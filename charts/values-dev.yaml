@@ -1,0 +1,40 @@
+replicaCount: 1
+
+image:
+  tag: "develop"
+
+ingress:
+  enabled: true
+  hosts:
+    - host: dev.core-pipeline.example.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+env:
+  - name: NODE_ENV
+    value: "development"
+  - name: LOG_LEVEL
+    value: "debug"
+  - name: LOG_PRETTY
+    value: "true"
+
+configMap:
+  kafka:
+    brokers: "dev-kafka:9092"
+  postgres:
+    host: "dev-postgres"
+    database: "core_pipeline_dev"
+  redis:
+    host: "dev-redis"
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
