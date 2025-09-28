@@ -1,0 +1,164 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linter
+        run: npm run lint
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Run test coverage
+        run: npm run test:cov
+      
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
+
+  build:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: development
+      url: https://dev.core-pipeline.example.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Update Helm values for dev
+        run: |
+          echo "Updating Helm values with image tag: ${{ needs.build.outputs.image-tag }}"
+          # Placeholder for updating Helm values
+          # This would typically update charts/values-dev.yaml with the new image tag
+          # yq eval '.image.tag = "${{ needs.build.outputs.image-tag }}"' -i charts/values-dev.yaml
+      
+      - name: Commit and push Helm values
+        run: |
+          echo "Committing updated Helm values for ArgoCD sync"
+          # git config user.name github-actions
+          # git config user.email github-actions@github.com
+          # git add charts/values-dev.yaml
+          # git commit -m "Update dev image to ${{ needs.build.outputs.image-tag }}"
+          # git push
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://core-pipeline.example.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Update Helm values for prod
+        run: |
+          echo "Updating Helm values with image tag: ${{ needs.build.outputs.image-tag }}"
+          # Placeholder for updating Helm values
+          # This would typically update charts/values-prod.yaml with the new image tag
+          # yq eval '.image.tag = "${{ needs.build.outputs.image-tag }}"' -i charts/values-prod.yaml
+      
+      - name: Commit and push Helm values
+        run: |
+          echo "Committing updated Helm values for ArgoCD sync"
+          # git config user.name github-actions
+          # git config user.email github-actions@github.com
+          # git add charts/values-prod.yaml
+          # git commit -m "Update prod image to ${{ needs.build.outputs.image-tag }}"
+          # git push
+      
+      - name: Create deployment record
+        run: |
+          echo "Recording deployment to production"
+          echo "Image: ${{ needs.build.outputs.image-tag }}"
+          echo "Digest: ${{ needs.build.outputs.image-digest }}"
+          echo "Time: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
