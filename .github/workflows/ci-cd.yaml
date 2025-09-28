@@ -108,24 +108,28 @@ jobs:
       url: https://dev.core-pipeline.example.com
     
     steps:
-      - name: Checkout code
+      - name: Checkout core-charts repository
         uses: actions/checkout@v4
+        with:
+          repository: uz0/core-charts
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: core-charts
       
       - name: Update Helm values for dev
         run: |
-          echo "Updating Helm values with image tag: ${{ needs.build.outputs.image-tag }}"
-          # Placeholder for updating Helm values
-          # This would typically update charts/values-dev.yaml with the new image tag
-          # yq eval '.image.tag = "${{ needs.build.outputs.image-tag }}"' -i charts/values-dev.yaml
+          cd core-charts
+          IMAGE_TAG="$(echo ${{ needs.build.outputs.image-tag }} | sed 's/.*://')"
+          yq eval ".image.tag = \"${IMAGE_TAG}\"" -i charts/core-pipeline/values-dev.yaml
       
       - name: Commit and push Helm values
         run: |
-          echo "Committing updated Helm values for ArgoCD sync"
-          # git config user.name github-actions
-          # git config user.email github-actions@github.com
-          # git add charts/values-dev.yaml
-          # git commit -m "Update dev image to ${{ needs.build.outputs.image-tag }}"
-          # git push
+          cd core-charts
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add charts/core-pipeline/values-dev.yaml
+          IMAGE_TAG="$(echo ${{ needs.build.outputs.image-tag }} | sed 's/.*://')"
+          git commit -m "Update dev image to ${IMAGE_TAG}" || echo "No changes to commit"
+          git push || echo "Nothing to push"
 
   deploy-prod:
     name: Deploy to Production
@@ -137,28 +141,52 @@ jobs:
       url: https://core-pipeline.example.com
     
     steps:
-      - name: Checkout code
+      - name: Checkout core-charts repository
         uses: actions/checkout@v4
+        with:
+          repository: uz0/core-charts
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: core-charts
       
       - name: Update Helm values for prod
         run: |
-          echo "Updating Helm values with image tag: ${{ needs.build.outputs.image-tag }}"
-          # Placeholder for updating Helm values
-          # This would typically update charts/values-prod.yaml with the new image tag
-          # yq eval '.image.tag = "${{ needs.build.outputs.image-tag }}"' -i charts/values-prod.yaml
+          cd core-charts
+          IMAGE_TAG="$(echo ${{ needs.build.outputs.image-tag }} | sed 's/.*://')"
+          yq eval ".image.tag = \"${IMAGE_TAG}\"" -i charts/core-pipeline/values-prod.yaml
       
       - name: Commit and push Helm values
         run: |
-          echo "Committing updated Helm values for ArgoCD sync"
-          # git config user.name github-actions
-          # git config user.email github-actions@github.com
-          # git add charts/values-prod.yaml
-          # git commit -m "Update prod image to ${{ needs.build.outputs.image-tag }}"
-          # git push
+          cd core-charts
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add charts/core-pipeline/values-prod.yaml
+          IMAGE_TAG="$(echo ${{ needs.build.outputs.image-tag }} | sed 's/.*://')"
+          git commit -m "Update prod image to ${IMAGE_TAG}" || echo "No changes to commit"
+          git push || echo "Nothing to push"
       
       - name: Create deployment record
-        run: |
-          echo "Recording deployment to production"
-          echo "Image: ${{ needs.build.outputs.image-tag }}"
-          echo "Digest: ${{ needs.build.outputs.image-digest }}"
-          echo "Time: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              task: 'deploy',
+              auto_merge: false,
+              environment: 'production',
+              description: 'Deployed via GitHub Actions',
+              payload: {
+                image: '${{ needs.build.outputs.image-tag }}',
+                digest: '${{ needs.build.outputs.image-digest }}'
+              }
+            });
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: data.id,
+              state: 'success',
+              environment_url: 'https://core-pipeline.example.com',
+              description: 'Deployment completed successfully'
+            });
