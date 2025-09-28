@@ -1,0 +1,37 @@
+replicaCount: 1
+
+image:
+  tag: "develop"
+
+ingress:
+  enabled: true
+  hosts:
+    - host: core-pipeline-dev.example.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+
+env:
+  NODE_ENV: development
+  LOG_LEVEL: debug
+
+kafka:
+  brokers: "kafka-dev.kafka.svc.cluster.local:9092"
+
+postgres:
+  host: postgres-dev.database.svc.cluster.local
+  database: core-pipeline-dev
+
+redis:
+  host: redis-dev.cache.svc.cluster.local
