@@ -11,7 +11,7 @@ A production-ready NestJS application with comprehensive observability, containe
 - **Distributed tracing** with OpenTelemetry (Tempo-ready)
 - **Docker containerization** with multi-stage builds
 - **GitHub Actions CI/CD** pipeline with GHCR integration
-- **Kubernetes deployment** ready with Helm charts
+- **Kubernetes deployment** ready (Helm charts to be created separately)
 - **GitOps ready** for ArgoCD integration
 
 ## Quick Start
@@ -131,24 +131,22 @@ The GitHub Actions workflow (`/.github/workflows/ci-cd.yaml`) provides:
 
 ## Kubernetes Deployment
 
-### Using Helm
+### Helm Charts
 
-1. Update values in `charts/core-pipeline/values.yaml` or environment-specific files
-2. Deploy to Kubernetes:
-
-```bash
-# Development environment
-helm install core-pipeline ./charts/core-pipeline -f ./charts/core-pipeline/values-dev.yaml
-
-# Production environment
-helm install core-pipeline ./charts/core-pipeline -f ./charts/core-pipeline/values-prod.yaml
-```
+Helm charts for this application should be created separately. See `HELM_CHARTS_INSTRUCTIONS.md` for detailed instructions on creating production-ready Helm charts with:
+- Multi-environment support (dev, staging, prod)
+- ArgoCD/GitOps integration
+- Prometheus ServiceMonitor
+- HorizontalPodAutoscaler
+- NetworkPolicies
+- Proper security contexts and resource limits
 
 ### GitOps with ArgoCD
 
-1. Point ArgoCD to this repository
-2. Configure automatic sync for the `charts/core-pipeline` directory
-3. CI/CD pipeline will update image tags automatically
+Once Helm charts are created:
+1. Point ArgoCD to the charts repository
+2. Configure automatic sync
+3. Use the Docker images from GHCR built by this CI/CD pipeline
 
 ## Observability Integration
 
@@ -202,7 +200,6 @@ core-pipeline/
 │   ├── app.module.ts    # Main application module
 │   └── main.ts          # Application entry point
 ├── test/                # Test files
-├── charts/              # Helm charts for Kubernetes
 ├── .github/             # GitHub Actions workflows
 ├── Dockerfile           # Container definition
 ├── package.json         # Dependencies and scripts
