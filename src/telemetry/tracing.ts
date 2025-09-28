@@ -16,13 +16,11 @@ export function initTracing() {
     return null;
   }
 
-  const resource = Resource.default().merge(
-    new Resource({
-      [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
-      [SemanticResourceAttributes.SERVICE_VERSION]: process.env.SERVICE_VERSION || '1.0.0',
-      [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.NODE_ENV || 'development',
-    }),
-  );
+  const resource = new Resource({
+    [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
+    [SemanticResourceAttributes.SERVICE_VERSION]: process.env.SERVICE_VERSION || '1.0.0',
+    [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.NODE_ENV || 'development',
+  });
 
   const traceExporter = new OTLPTraceExporter({
     url: `${otlpEndpoint}/v1/traces`,
@@ -37,8 +35,8 @@ export function initTracing() {
           enabled: false,
         },
         '@opentelemetry/instrumentation-http': {
-          requestHook: (span, request) => {
-            span.setAttribute('http.request.body', JSON.stringify(request.body || {}));
+          requestHook: (span) => {
+            span.setAttribute('http.request.body', '{}');
           },
         },
       }),
