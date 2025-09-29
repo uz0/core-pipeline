@@ -13,20 +13,41 @@ async function bootstrap() {
       bufferLogs: true,
     });
 
+    // Enable CORS for the domains
+    app.enableCors({
+      origin: [
+        'https://core-pipeline.theedgestory.org',
+        'https://core-pipeline.dev.theedgestory.org',
+        'http://localhost:3000',
+        'http://localhost:3001',
+      ],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    });
+
     const port = process.env.PORT || 3000;
     
     // Configure Swagger
     const isProduction = process.env.NODE_ENV === 'production';
     
-    const config = new DocumentBuilder()
+    const configBuilder = new DocumentBuilder()
       .setTitle('Core Pipeline API')
       .setDescription('Consolidated API for testing all system components - Database, Redis, Kafka')
       .setVersion('1.0')
       .addTag('showcase', 'Showcase API - All features consolidated')
       .addTag('health', 'Health check endpoints')
-      .addTag('metrics', 'Metrics endpoints')
-      .addServer(`http://localhost:${port}`, 'Local Development')
-      .build();
+      .addTag('metrics', 'Metrics endpoints');
+    
+    // Add appropriate servers based on environment
+    if (isProduction) {
+      configBuilder.addServer('https://core-pipeline.theedgestory.org', 'Production');
+    } else if (process.env.NODE_ENV === 'staging' || process.env.NODE_ENV === 'development') {
+      configBuilder.addServer('https://core-pipeline.dev.theedgestory.org', 'Development');
+    }
+    configBuilder.addServer(`http://localhost:${port}`, 'Local');
+    
+    const config = configBuilder.build();
     
     const document = SwaggerModule.createDocument(app, config);
     
