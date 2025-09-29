@@ -2,6 +2,8 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
 import { ConfigService } from '@nestjs/config';
 import { EventStorageService } from './event-storage.service';
+import { CallRepository } from '../../repositories/call.repository';
+import { RedisService } from './redis.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -14,6 +16,8 @@ export class KafkaConsumerService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private readonly eventStorage: EventStorageService,
+    private readonly callRepository: CallRepository,
+    private readonly redisService: RedisService,
   ) {
     this.kafka = new Kafka({
       clientId: this.configService.get('KAFKA_CLIENT_ID', 'core-pipeline'),
@@ -30,7 +34,7 @@ export class KafkaConsumerService implements OnModuleInit {
       await this.consumer.connect();
       this.logger.log('Kafka consumer connected');
 
-      const defaultTopics = ['user-events', 'system-events', 'showcase-events'];
+      const defaultTopics = ['user-events', 'system-events', 'showcase-events', 'call-events'];
       for (const topic of defaultTopics) {
         await this.subscribeToTopic(topic);
       }
@@ -134,6 +138,9 @@ export class KafkaConsumerService implements OnModuleInit {
       case 'showcase-events':
         this.handleShowcaseEvent(value, headers);
         break;
+      case 'call-events':
+        this.handleCallEvent(value, headers);
+        break;
       default:
         this.logger.log(`Received message from topic: ${topic}`, value);
     }
@@ -149,6 +156,33 @@ export class KafkaConsumerService implements OnModuleInit {
 
   private handleShowcaseEvent(event: any, headers: Record<string, string>): void {
     this.logger.log('Processing showcase event', { event, headers });
+  }
+
+  private async handleCallEvent(event: any, headers: Record<string, string>): Promise<void> {
+    this.logger.log('Processing call event', { event, headers });
+
+    try {
+      const call = await this.callRepository.createCall({
+        callerId: event.callerId,
+        recipientId: event.recipientId,
+        status: event.status || 'initiated',
+        metadata: event.metadata || {},
+      });
+
+      await this.redisService.store(`call:${call.id}`, call, 3600);
+
+      await this.redisService.publish('call-created', {
+        callId: call.id,
+        timestamp: new Date().toISOString(),
+        ...call,
+      });
+
+      await this.redisService.addCallToQueue(call);
+
+      this.logger.log(`Call event processed and stored: ${call.id}`);
+    } catch (error) {
+      this.logger.error('Failed to process call event', error);
+    }
   }
 
   getSubscribedTopics(): string[] {
