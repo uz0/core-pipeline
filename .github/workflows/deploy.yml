@@ -6,6 +6,19 @@ on:
       - main
       - develop
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - production
+      branch:
+        description: 'Branch to deploy (leave empty for current branch)'
+        required: false
+        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -63,12 +76,12 @@ jobs:
             VERSION=${{ steps.meta.outputs.version }}
 
   deploy:
-    name: Deploy to ${{ github.ref == 'refs/heads/main' && 'Production' || 'Development' }}
+    name: Deploy to ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'Production' || 'Development') }}
     runs-on: ubuntu-latest
     needs: build-and-push
     environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
-      url: ${{ github.ref == 'refs/heads/main' && 'https://core-pipeline.theedgestory.org' || 'https://core-pipeline.dev.theedgestory.org' }}
+      name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'development') }}
+      url: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') || github.ref == 'refs/heads/main' && 'https://core-pipeline.theedgestory.org' || 'https://core-pipeline.dev.theedgestory.org' }}
     
     steps:
       - name: Checkout core-charts repository
@@ -81,7 +94,13 @@ jobs:
       - name: Update Helm values
         run: |
           cd core-charts
-          ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          # Determine environment based on trigger type
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ENVIRONMENT=${{ github.event.inputs.environment == 'production' && 'prod' || 'dev' }}
+          else
+            ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          fi
+          
           IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
           
           # Update the image tag in values file
@@ -97,9 +116,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          # Determine environment based on trigger type
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ENVIRONMENT=${{ github.event.inputs.environment == 'production' && 'prod' || 'dev' }}
+            DEPLOY_TYPE="Manual"
+          else
+            ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+            DEPLOY_TYPE="Auto"
+          fi
+          
           IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
           
           git add charts/core-pipeline/values-${ENVIRONMENT}.yaml
-          git commit -m "Deploy core-pipeline to ${ENVIRONMENT}: ${IMAGE_TAG}" || echo "No changes to commit"
+          git commit -m "[$DEPLOY_TYPE] Deploy core-pipeline to ${ENVIRONMENT}: ${IMAGE_TAG}" || echo "No changes to commit"
           git push
