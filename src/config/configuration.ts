@@ -4,7 +4,8 @@ export default () => ({
 
   logging: {
     level: process.env.LOG_LEVEL || 'info',
-    prettyPrint: process.env.LOG_PRETTY === 'true',
+    prettyPrint: process.env.LOG_PRETTY === 'true' || 
+                 (process.env.NODE_ENV === 'development' && process.env.LOG_PRETTY !== 'false'),
   },
 
   metrics: {

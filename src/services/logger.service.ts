@@ -9,7 +9,8 @@ export class LoggerService implements NestLoggerService {
 
   constructor(private configService?: ConfigService) {
     const level = this.configService?.get('logging.level') || 'info';
-    const prettyPrint = this.configService?.get('logging.prettyPrint') || false;
+    const isDevelopment = (this.configService?.get('node_env') || process.env.NODE_ENV) === 'development';
+    const prettyPrint = this.configService?.get('logging.prettyPrint') ?? isDevelopment;
 
     this.logger = pino({
       level,
@@ -18,20 +19,27 @@ export class LoggerService implements NestLoggerService {
             target: 'pino-pretty',
             options: {
               colorize: true,
-              translateTime: 'SYS:standard',
-              ignore: 'pid,hostname',
+              translateTime: 'HH:MM:ss',
+              ignore: 'pid,hostname,service,env',
+              messageFormat: '{if context}[{context}] {end}{msg}',
+              singleLine: false,
+              errorLikeObjectKeys: ['err', 'error', 'trace'],
             },
           }
         : undefined,
-      formatters: {
-        level: (label) => {
-          return { level: label };
-        },
-      },
-      base: {
-        service: 'core-pipeline',
-        env: this.configService?.get('node_env') || 'development',
-      },
+      formatters: prettyPrint
+        ? undefined
+        : {
+            level: (label) => {
+              return { level: label };
+            },
+          },
+      base: prettyPrint
+        ? null
+        : {
+            service: 'core-pipeline',
+            env: this.configService?.get('node_env') || 'development',
+          },
     });
   }
 

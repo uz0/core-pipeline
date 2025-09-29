@@ -1,15 +1,19 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bull';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './controllers/health.controller';
 import { AppController } from './controllers/app.controller';
 import { MetricsController } from './controllers/metrics.controller';
+import { ShowcaseController } from './controllers/showcase.controller';
 import { LoggerService } from './services/logger.service';
 import { MetricsService } from './services/metrics.service';
 import { TracingMiddleware } from './middleware/tracing.middleware';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { MetricsMiddleware } from './middleware/metrics.middleware';
 import { KafkaModule } from './kafka/kafka.module';
+import { getDatabaseConfig } from './config/database.config';
 import configuration from './config/configuration';
 
 @Module({
@@ -18,10 +22,21 @@ import configuration from './config/configuration';
       load: [configuration],
       isGlobal: true,
     }),
+    TypeOrmModule.forRoot(getDatabaseConfig()),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        redis: {
+          host: configService.get('REDIS_HOST', 'localhost'),
+          port: configService.get('REDIS_PORT', 6379),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     TerminusModule,
     KafkaModule,
   ],
-  controllers: [AppController, HealthController, MetricsController],
+  controllers: [AppController, HealthController, MetricsController, ShowcaseController],
   providers: [LoggerService, MetricsService],
 })
 export class AppModule implements NestModule {
