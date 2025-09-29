@@ -50,6 +50,41 @@ services:
     networks:
       - kafka-network
 
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: core_pipeline
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
   app:
     build: .
     container_name: core-pipeline
@@ -58,15 +93,26 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      ENABLE_SWAGGER: "true"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: core_pipeline
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       KAFKA_BROKER: kafka:9093
       KAFKA_CLIENT_ID: core-pipeline
       KAFKA_CONSUMER_GROUP: core-pipeline-group
       OTEL_SERVICE_NAME: core-pipeline
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     depends_on:
+      - postgres
+      - redis
       - kafka
       - jaeger
     networks:
+      - app-network
       - kafka-network
       - monitoring-network
 
@@ -110,11 +156,15 @@ services:
       - monitoring-network
 
 networks:
+  app-network:
+    driver: bridge
   kafka-network:
     driver: bridge
   monitoring-network:
     driver: bridge
 
 volumes:
+  postgres_data:
+  redis_data:
   prometheus_data:
   grafana_data:
