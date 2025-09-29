@@ -1,26 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../../app.module';
-import { DataSource } from 'typeorm';
+import { TestAppModule } from '../../../test/test-app.module';
 import { CallRepository } from '../../repositories/call.repository';
 
 describe('Kafka Controller E2E Tests', () => {
   let app: INestApplication;
   let callRepository: CallRepository;
-  let dataSource: DataSource;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [TestAppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
 
     callRepository = app.get<CallRepository>(CallRepository);
-    dataSource = app.get<DataSource>(DataSource);
-  });
+  }, 15000);
 
   afterAll(async () => {
     await app.close();
@@ -31,7 +28,7 @@ describe('Kafka Controller E2E Tests', () => {
     await callRepository.delete({});
   });
 
-  describe('POST /api/kafka/produce', () => {
+  describe('POST /api/showcase/kafka/produce', () => {
     it('should produce a message to Kafka', async () => {
       const message = {
         topic: 'test-topic',
@@ -41,7 +38,7 @@ describe('Kafka Controller E2E Tests', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send(message)
         .expect(201);
 
@@ -64,9 +61,9 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('GET /api/kafka', () => {
+  describe('GET /api/showcase/kafka/messages', () => {
     it('should retrieve all messages', async () => {
-      const response = await request(app.getHttpServer()).get('/api/kafka').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/showcase/kafka/messages').expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
     });

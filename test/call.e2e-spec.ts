@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { TestAppModule } from './test-app.module';
 import { CallRepository } from '../src/repositories/call.repository';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Call } from '../src/entities/call.entity';
@@ -12,13 +12,13 @@ describe('CallController (e2e)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [TestAppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-    callRepository = moduleFixture.get<CallRepository>(getRepositoryToken(Call));
+    callRepository = moduleFixture.get<CallRepository>(CallRepository);
 
     await app.init();
   });
@@ -32,9 +32,9 @@ describe('CallController (e2e)', () => {
     await callRepository.delete({});
   });
 
-  describe('/api/calls (GET)', () => {
+  describe('/api/showcase/calls (GET)', () => {
     it('should return empty array when no calls exist', async () => {
-      const response = await request(app.getHttpServer()).get('/api/calls').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/showcase/calls').expect(200);
 
       expect(response.body).toEqual({
         success: true,
@@ -57,7 +57,7 @@ describe('CallController (e2e)', () => {
         status: 'completed',
       });
 
-      const response = await request(app.getHttpServer()).get('/api/calls').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/showcase/calls').expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.count).toBe(2);
@@ -116,7 +116,7 @@ describe('CallController (e2e)', () => {
     });
   });
 
-  describe('/api/calls/stats (GET)', () => {
+  describe('/api/showcase/calls/stats (GET)', () => {
     it('should return call statistics', async () => {
       // Create test calls with different statuses
       await callRepository.createCall({
@@ -162,7 +162,7 @@ describe('CallController (e2e)', () => {
     });
   });
 
-  describe('/api/calls/:id (GET)', () => {
+  describe('/api/showcase/calls/:id (GET)', () => {
     it('should return call by id', async () => {
       const call = await callRepository.createCall({
         callerId: 'user-1',
@@ -170,7 +170,7 @@ describe('CallController (e2e)', () => {
         status: 'initiated',
       });
 
-      const response = await request(app.getHttpServer()).get(`/api/calls/${call.id}`).expect(200);
+      const response = await request(app.getHttpServer()).get(`/api/showcase/calls/${call.id}`).expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.call.id).toBe(call.id);
@@ -187,7 +187,7 @@ describe('CallController (e2e)', () => {
     });
   });
 
-  describe('/api/calls (POST)', () => {
+  describe('/api/showcase/calls (POST)', () => {
     it('should create a new call', async () => {
       const callData = {
         callerId: 'user-123',
@@ -197,7 +197,7 @@ describe('CallController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/calls')
+        .post('/api/showcase/calls')
         .send(callData)
         .expect(201);
 
@@ -215,7 +215,7 @@ describe('CallController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/calls')
+        .post('/api/showcase/calls')
         .send(callData)
         .expect(201);
 
@@ -224,7 +224,7 @@ describe('CallController (e2e)', () => {
     });
   });
 
-  describe('/api/calls/:id (PATCH)', () => {
+  describe('/api/showcase/calls/:id (PATCH)', () => {
     it('should update existing call', async () => {
       const call = await callRepository.createCall({
         callerId: 'user-1',
@@ -258,7 +258,7 @@ describe('CallController (e2e)', () => {
     });
   });
 
-  describe('/api/calls/:id/status/:status (PATCH)', () => {
+  describe('/api/showcase/calls/:id/status/:status (PATCH)', () => {
     it('should update call status', async () => {
       const call = await callRepository.createCall({
         callerId: 'user-1',
@@ -276,7 +276,7 @@ describe('CallController (e2e)', () => {
     });
   });
 
-  describe('/api/calls/:id (DELETE)', () => {
+  describe('/api/showcase/calls/:id (DELETE)', () => {
     it('should delete existing call', async () => {
       const call = await callRepository.createCall({
         callerId: 'user-1',
@@ -300,7 +300,7 @@ describe('CallController (e2e)', () => {
     });
   });
 
-  describe('/api/calls/status/:status (GET)', () => {
+  describe('/api/showcase/calls/status/:status (GET)', () => {
     it('should get calls by status', async () => {
       await callRepository.createCall({
         callerId: 'user-1',
@@ -331,7 +331,7 @@ describe('CallController (e2e)', () => {
     });
   });
 
-  describe('/api/calls/recent/:limit (GET)', () => {
+  describe('/api/showcase/calls/recent/:limit (GET)', () => {
     it('should get recent calls with limit', async () => {
       // Create 10 calls with delays
       for (let i = 0; i < 10; i++) {
@@ -357,7 +357,7 @@ describe('CallController (e2e)', () => {
       for (let i = 0; i < 10; i++) {
         promises.push(
           request(app.getHttpServer())
-            .post('/api/calls')
+            .post('/api/showcase/calls')
             .send({
               callerId: `user-${i}`,
               recipientId: `recipient-${i}`,

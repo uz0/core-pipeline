@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { TestAppModule } from './test-app.module';
 
 describe('RedisController (e2e)', () => {
   let app: INestApplication;
@@ -9,7 +9,7 @@ describe('RedisController (e2e)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [TestAppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -25,9 +25,9 @@ describe('RedisController (e2e)', () => {
     await app.close();
   });
 
-  describe('/api/redis/health (GET)', () => {
+  describe('/api/showcase/redis/health (GET)', () => {
     it('should check Redis health', async () => {
-      const response = await request(app.getHttpServer()).get('/api/redis/health').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/showcase/redis/health').expect(200);
 
       expect(response.body).toHaveProperty('connected');
       expect(response.body).toHaveProperty('timestamp');
@@ -35,7 +35,7 @@ describe('RedisController (e2e)', () => {
     });
   });
 
-  describe('/api/redis/cache (POST)', () => {
+  describe('/api/showcase/redis/cache (POST)', () => {
     it('should store data in cache without TTL', async () => {
       const testKey = `test:e2e:${Date.now()}`;
       testKeys.push(testKey);
@@ -46,7 +46,7 @@ describe('RedisController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/redis/cache')
+        .post('/api/showcase/redis/cache')
         .send(data)
         .expect(201);
 
@@ -67,7 +67,7 @@ describe('RedisController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/redis/cache')
+        .post('/api/showcase/redis/cache')
         .send(data)
         .expect(201);
 
@@ -99,7 +99,7 @@ describe('RedisController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/redis/cache')
+        .post('/api/showcase/redis/cache')
         .send(data)
         .expect(201);
 
@@ -108,7 +108,7 @@ describe('RedisController (e2e)', () => {
     });
   });
 
-  describe('/api/redis/cache/:key (GET)', () => {
+  describe('/api/showcase/redis/cache/:key (GET)', () => {
     it('should retrieve cached data', async () => {
       const testKey = `test:e2e:get:${Date.now()}`;
       testKeys.push(testKey);
@@ -116,7 +116,7 @@ describe('RedisController (e2e)', () => {
 
       // First store the data
       await request(app.getHttpServer())
-        .post('/api/redis/cache')
+        .post('/api/showcase/redis/cache')
         .send({
           key: testKey,
           value: testValue,
@@ -135,7 +135,7 @@ describe('RedisController (e2e)', () => {
 
     it('should return not found for non-existent key', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/redis/cache/non-existent-key')
+        .get('/api/showcase/redis/cache/non-existent-key')
         .expect(200);
 
       expect(response.body.success).toBe(false);
@@ -143,13 +143,13 @@ describe('RedisController (e2e)', () => {
     });
   });
 
-  describe('/api/redis/cache/:key (DELETE)', () => {
+  describe('/api/showcase/redis/cache/:key (DELETE)', () => {
     it('should delete cached data', async () => {
       const testKey = `test:e2e:delete:${Date.now()}`;
 
       // First store the data
       await request(app.getHttpServer())
-        .post('/api/redis/cache')
+        .post('/api/showcase/redis/cache')
         .send({
           key: testKey,
           value: { test: 'delete' },
@@ -171,14 +171,14 @@ describe('RedisController (e2e)', () => {
     });
   });
 
-  describe('/api/redis/exists/:key (GET)', () => {
+  describe('/api/showcase/redis/exists/:key (GET)', () => {
     it('should check if key exists', async () => {
       const testKey = `test:e2e:exists:${Date.now()}`;
       testKeys.push(testKey);
 
       // Store data first
       await request(app.getHttpServer())
-        .post('/api/redis/cache')
+        .post('/api/showcase/redis/cache')
         .send({
           key: testKey,
           value: { test: 'exists' },
@@ -196,14 +196,14 @@ describe('RedisController (e2e)', () => {
 
     it('should return false for non-existent key', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/redis/exists/non-existent-key-123')
+        .get('/api/showcase/redis/exists/non-existent-key-123')
         .expect(200);
 
       expect(response.body.exists).toBe(false);
     });
   });
 
-  describe('/api/redis/pubsub/publish (POST)', () => {
+  describe('/api/showcase/redis/pubsub/publish (POST)', () => {
     it('should publish message to channel', async () => {
       const message = {
         channel: 'test-channel',
@@ -217,7 +217,7 @@ describe('RedisController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/redis/pubsub/publish')
+        .post('/api/showcase/redis/pubsub/publish')
         .send(message)
         .expect(201);
 
@@ -233,7 +233,7 @@ describe('RedisController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/redis/pubsub/publish')
+        .post('/api/showcase/redis/pubsub/publish')
         .send(message)
         .expect(201);
 
@@ -242,10 +242,10 @@ describe('RedisController (e2e)', () => {
     });
   });
 
-  describe('/api/redis/pubsub/subscribe/:channel (POST)', () => {
+  describe('/api/showcase/redis/pubsub/subscribe/:channel (POST)', () => {
     it('should subscribe to channel', async () => {
       const response = await request(app.getHttpServer())
-        .post('/api/redis/pubsub/subscribe/test-events')
+        .post('/api/showcase/redis/pubsub/subscribe/test-events')
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -254,10 +254,10 @@ describe('RedisController (e2e)', () => {
     });
   });
 
-  describe('/api/redis/queue/status (GET)', () => {
+  describe('/api/showcase/redis/queue/status (GET)', () => {
     it('should get queue status', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/redis/queue/status')
+        .get('/api/showcase/redis/queue/status')
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -272,7 +272,7 @@ describe('RedisController (e2e)', () => {
     });
   });
 
-  describe('/api/redis/queue (POST)', () => {
+  describe('/api/showcase/redis/queue (POST)', () => {
     it('should add job to queue', async () => {
       const jobData = {
         data: {
@@ -285,7 +285,7 @@ describe('RedisController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/redis/queue')
+        .post('/api/showcase/redis/queue')
         .send(jobData)
         .expect(201);
 
@@ -311,7 +311,7 @@ describe('RedisController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/redis/queue')
+        .post('/api/showcase/redis/queue')
         .send(jobData)
         .expect(201);
 
@@ -319,9 +319,9 @@ describe('RedisController (e2e)', () => {
     });
   });
 
-  describe('/api/redis/test (POST)', () => {
+  describe('/api/showcase/redis/test (POST)', () => {
     it('should run comprehensive Redis test', async () => {
-      const response = await request(app.getHttpServer()).post('/api/redis/test').expect(200);
+      const response = await request(app.getHttpServer()).post('/api/showcase/redis/test').expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.tests).toBeDefined();
@@ -343,7 +343,7 @@ describe('RedisController (e2e)', () => {
 
         promises.push(
           request(app.getHttpServer())
-            .post('/api/redis/cache')
+            .post('/api/showcase/redis/cache')
             .send({
               key,
               value: { id: i, timestamp: Date.now() },
@@ -366,7 +366,7 @@ describe('RedisController (e2e)', () => {
       for (let i = 0; i < 10; i++) {
         publishPromises.push(
           request(app.getHttpServer())
-            .post('/api/redis/pubsub/publish')
+            .post('/api/showcase/redis/pubsub/publish')
             .send({
               channel: 'test-concurrent',
               message: { id: i, timestamp: Date.now() },
@@ -386,7 +386,7 @@ describe('RedisController (e2e)', () => {
   describe('Error handling', () => {
     it('should handle invalid data types', async () => {
       const response = await request(app.getHttpServer())
-        .post('/api/redis/cache')
+        .post('/api/showcase/redis/cache')
         .send({
           key: 123, // Should be string
           value: 'test',
@@ -399,7 +399,7 @@ describe('RedisController (e2e)', () => {
 
     it('should handle missing required fields', async () => {
       const response = await request(app.getHttpServer())
-        .post('/api/redis/cache')
+        .post('/api/showcase/redis/cache')
         .send({
           value: 'test', // Missing key
         })
@@ -415,7 +415,7 @@ describe('RedisController (e2e)', () => {
 
       // Store with 1 second TTL
       await request(app.getHttpServer())
-        .post('/api/redis/cache')
+        .post('/api/showcase/redis/cache')
         .send({
           key: testKey,
           value: { test: 'expire' },

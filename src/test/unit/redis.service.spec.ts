@@ -2,9 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { getQueueToken } from '@nestjs/bull';
 import { RedisService } from '../../kafka/services/redis.service';
-import Redis from 'ioredis';
 
-jest.mock('ioredis');
+jest.mock('ioredis', () => {
+  return jest.fn(() => ({
+    setex: jest.fn(),
+    set: jest.fn(),
+    get: jest.fn(),
+    del: jest.fn(),
+    exists: jest.fn(),
+    ping: jest.fn(),
+  }));
+});
 
 describe('RedisService', () => {
   let service: RedisService;
@@ -32,7 +40,6 @@ describe('RedisService', () => {
       getJobCounts: jest.fn(),
     };
 
-    (Redis as any).mockImplementation(() => mockRedisClient);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

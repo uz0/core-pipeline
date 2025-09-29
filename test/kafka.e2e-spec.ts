@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { TestAppModule } from './test-app.module';
 
 describe('KafkaController (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [TestAppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -39,7 +39,7 @@ describe('KafkaController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send(message)
         .expect(201);
 
@@ -59,7 +59,7 @@ describe('KafkaController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send(message)
         .expect(201);
 
@@ -88,7 +88,7 @@ describe('KafkaController (e2e)', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send(message)
         .expect(201);
 
@@ -100,7 +100,7 @@ describe('KafkaController (e2e)', () => {
     it('should retrieve all consumed messages', async () => {
       // First produce a message
       await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send({
           topic: 'test-events',
           value: { test: 'retrieve' },
@@ -117,14 +117,14 @@ describe('KafkaController (e2e)', () => {
     it('should filter messages by topic', async () => {
       // Produce messages to different topics
       await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send({
           topic: 'user-events',
           value: { userId: '789' },
         });
 
       await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send({
           topic: 'system-events',
           value: { system: 'test' },
@@ -187,7 +187,7 @@ describe('KafkaController (e2e)', () => {
     it('should get message by ID', async () => {
       // First produce a message and get its ID
       const produceResponse = await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send({
           topic: 'test-events',
           value: { test: 'getById' },
@@ -355,7 +355,7 @@ describe('KafkaController (e2e)', () => {
       for (let i = 0; i < 20; i++) {
         promises.push(
           request(app.getHttpServer())
-            .post('/api/kafka/produce')
+            .post('/api/showcase/kafka/produce')
             .send({
               topic: 'concurrent-test',
               value: { id: i, timestamp: Date.now() },
@@ -380,7 +380,7 @@ describe('KafkaController (e2e)', () => {
         if (i % 3 === 0) {
           operations.push(
             request(app.getHttpServer())
-              .post('/api/kafka/produce')
+              .post('/api/showcase/kafka/produce')
               .send({
                 topic: 'mixed-test',
                 value: { id: i },
@@ -404,7 +404,7 @@ describe('KafkaController (e2e)', () => {
   describe('Error handling', () => {
     it('should handle invalid topic name', async () => {
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send({
           topic: '',
           value: { test: 'data' },
@@ -416,7 +416,7 @@ describe('KafkaController (e2e)', () => {
 
     it('should handle missing required fields', async () => {
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send({
           value: { test: 'data' },
         })
@@ -457,7 +457,7 @@ describe('KafkaController (e2e)', () => {
       const startTime = Date.now();
 
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send(largeData)
         .expect(201);
 
@@ -473,7 +473,7 @@ describe('KafkaController (e2e)', () => {
 
       for (let i = 0; i < 50; i++) {
         await request(app.getHttpServer())
-          .post('/api/kafka/produce')
+          .post('/api/showcase/kafka/produce')
           .send({
             topic: 'rapid-test',
             value: { id: i, timestamp: Date.now() },

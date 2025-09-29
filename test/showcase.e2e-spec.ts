@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { TestAppModule } from './test-app.module';
 
 describe('ShowcaseController (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [TestAppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -37,10 +37,10 @@ describe('ShowcaseController (e2e)', () => {
     });
   });
 
-  describe('/api/showcase/basic-flow (GET)', () => {
+  describe('/api/showcase/test/basic-flow (POST)', () => {
     it('should run basic flow showcase', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/showcase/basic-flow')
+        .post('/api/showcase/test/basic-flow')
         .expect(200);
 
       expect(response.body.scenario).toBe('basic-flow');
