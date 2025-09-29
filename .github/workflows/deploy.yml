@@ -1,24 +1,18 @@
-name: Deploy to Kubernetes
+name: Deploy
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy to'
+        description: 'Environment to deploy'
         required: true
         default: 'development'
         type: choice
         options:
           - development
           - production
-      branch:
-        description: 'Branch to deploy (leave empty for current branch)'
-        required: false
-        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -26,14 +20,13 @@ env:
 
 jobs:
   build-and-push:
-    name: Build and Push Docker Image
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     outputs:
       image-tag: ${{ steps.meta.outputs.version }}
-      image-digest: ${{ steps.build.outputs.digest }}
     
     steps:
       - name: Checkout code
@@ -60,7 +53,6 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
-        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -70,34 +62,27 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILD_DATE=${{ steps.meta.outputs.created }}
-            VCS_REF=${{ github.sha }}
-            VERSION=${{ steps.meta.outputs.version }}
 
   deploy:
-    name: Deploy to ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'Production' || 'Development') }}
+    name: Deploy to ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'Production' || 'Development' }}
     runs-on: ubuntu-latest
     needs: build-and-push
     environment:
-      name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'development') }}
-      url: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') || github.ref == 'refs/heads/main' && 'https://core-pipeline.theedgestory.org' || 'https://core-pipeline.dev.theedgestory.org' }}
+      name: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'production' || 'development' }}
+      url: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'https://core-pipeline.theedgestory.org' || 'https://dev.core-pipeline.theedgestory.org' }}
     permissions:
       contents: read
-      packages: write
       deployments: write
     
     steps:
-      - name: Create GitHub deployment
+      - name: Create deployment record
         id: deployment
         uses: actions/github-script@v7
         with:
           script: |
-            const environment = '${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'development') }}';
-            const isProd = environment === 'production';
-            const environmentUrl = isProd 
-              ? 'https://core-pipeline.theedgestory.org' 
-              : 'https://core-pipeline.dev.theedgestory.org';
+            const isProd = context.eventName === 'push' && context.ref === 'refs/heads/main';
+            const environment = isProd ? 'production' : 'development';
+            const url = isProd ? 'https://core-pipeline.theedgestory.org' : 'https://dev.core-pipeline.theedgestory.org';
             
             const deployment = await github.rest.repos.createDeployment({
               owner: context.repo.owner,
@@ -108,28 +93,20 @@ jobs:
               required_contexts: [],
               environment: environment,
               description: `Deploy to ${environment}`,
-              transient_environment: false,
-              production_environment: isProd,
-              payload: {
-                image_tag: '${{ needs.build-and-push.outputs.image-tag }}',
-                image_digest: '${{ needs.build-and-push.outputs.image-digest }}',
-                target_url: environmentUrl
-              }
+              production_environment: isProd
             });
             
-            core.setOutput('deployment_id', deployment.data.id);
-            
-            // Set initial status
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               deployment_id: deployment.data.id,
               state: 'in_progress',
-              environment_url: environmentUrl,
-              description: 'Deployment in progress...'
+              environment_url: url
             });
             
-            return deployment.data;
+            core.setOutput('deployment_id', deployment.data.id);
+            core.setOutput('environment', environment);
+            core.setOutput('url', url);
       
       - name: Checkout core-charts repository
         uses: actions/checkout@v4
@@ -141,63 +118,27 @@ jobs:
       - name: Update Helm values
         run: |
           cd core-charts
-          # Determine environment based on trigger type
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            ENVIRONMENT=${{ github.event.inputs.environment == 'production' && 'prod' || 'dev' }}
-          else
-            ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-          fi
-          
+          ENVIRONMENT=${{ steps.deployment.outputs.environment == 'production' && 'prod' || 'dev' }}
           IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
           
-          # Update the image tag in values file
           yq eval ".image.tag = \"${IMAGE_TAG}\"" -i charts/core-pipeline/values-${ENVIRONMENT}.yaml
           
-          # Show the changes
-          echo "Updated values-${ENVIRONMENT}.yaml with image tag: ${IMAGE_TAG}"
-          git diff
-
-      - name: Commit and push changes
-        run: |
-          cd core-charts
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Determine environment based on trigger type
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            ENVIRONMENT=${{ github.event.inputs.environment == 'production' && 'prod' || 'dev' }}
-            DEPLOY_TYPE="Manual"
-          else
-            ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-            DEPLOY_TYPE="Auto"
-          fi
-          
-          IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
-          
           git add charts/core-pipeline/values-${ENVIRONMENT}.yaml
-          git commit -m "[$DEPLOY_TYPE] Deploy core-pipeline to ${ENVIRONMENT}: ${IMAGE_TAG}" || echo "No changes to commit"
+          git commit -m "Deploy to ${ENVIRONMENT}: ${IMAGE_TAG}" || echo "No changes"
           git push
-      
-      - name: Update deployment status to success
+
+      - name: Update deployment status
         if: always()
         uses: actions/github-script@v7
         with:
           script: |
-            const environment = '${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'development') }}';
-            const isProd = environment === 'production';
-            const environmentUrl = isProd 
-              ? 'https://core-pipeline.theedgestory.org' 
-              : 'https://core-pipeline.dev.theedgestory.org';
-            
             const state = '${{ job.status }}' === 'success' ? 'success' : 'failure';
-            
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               deployment_id: ${{ steps.deployment.outputs.deployment_id }},
               state: state,
-              environment_url: environmentUrl,
-              description: state === 'success' 
-                ? `Successfully deployed to ${environment}`
-                : `Deployment to ${environment} failed`
+              environment_url: '${{ steps.deployment.outputs.url }}'
             });
