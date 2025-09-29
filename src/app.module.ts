@@ -9,6 +9,7 @@ import { MetricsService } from './services/metrics.service';
 import { TracingMiddleware } from './middleware/tracing.middleware';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { MetricsMiddleware } from './middleware/metrics.middleware';
+import { KafkaModule } from './kafka/kafka.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -18,6 +19,7 @@ import configuration from './config/configuration';
       isGlobal: true,
     }),
     TerminusModule,
+    KafkaModule,
   ],
   controllers: [AppController, HealthController, MetricsController],
   providers: [LoggerService, MetricsService],
