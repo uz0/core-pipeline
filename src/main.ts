@@ -13,22 +13,39 @@ async function bootstrap() {
       bufferLogs: true,
     });
 
+    const port = process.env.PORT || 3000;
+    
+    // Configure Swagger
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     const config = new DocumentBuilder()
       .setTitle('Core Pipeline API')
-      .setDescription('Core Pipeline REST API with observability and Kafka showcase')
+      .setDescription('Consolidated API for testing all system components - Database, Redis, Kafka')
       .setVersion('1.0')
+      .addTag('showcase', 'Showcase API - All features consolidated')
       .addTag('health', 'Health check endpoints')
-      .addTag('kafka', 'Kafka showcase endpoints')
+      .addTag('metrics', 'Metrics endpoints')
+      .addServer(`http://localhost:${port}`, 'Local Development')
       .build();
+    
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('swagger', app, document);
-
-    const port = process.env.PORT || 3000;
+    
+    // Enable Swagger in development or if explicitly enabled in production
+    if (!isProduction || process.env.ENABLE_SWAGGER === 'true') {
+      SwaggerModule.setup('api-docs', app, document, {
+        customSiteTitle: 'Core Pipeline API Documentation',
+        customfavIcon: 'https://swagger.io/favicon-32x32.png',
+        customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css',
+      });
+      console.log(`Swagger documentation available at: http://localhost:${port}/api-docs`);
+    } else {
+      console.log('Swagger documentation is disabled in production. Set ENABLE_SWAGGER=true to enable.');
+    }
     await app.listen(port);
 
     console.log(`Application is running on: http://localhost:${port}`);
-    console.log(`Swagger documentation available at: http://localhost:${port}/swagger`);
     console.log(`Metrics available at: http://localhost:${port}/metrics`);
+    console.log(`Health check available at: http://localhost:${port}/health`);
   } catch (error) {
     console.error('Failed to start application:', error);
     process.exit(1);
