@@ -63,6 +63,7 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     continue-on-error: true  # Allow job to fail without blocking PR
+    if: contains(github.event.head_commit.message, 'run-e2e') || github.event_name == 'push'  # Only run on push or if commit message contains 'run-e2e'
     
     services:
       postgres:

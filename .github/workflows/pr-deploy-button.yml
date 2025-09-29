@@ -1,0 +1,94 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  deploy-info:
+    name: Deploy to Dev Environment
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    
+    steps:
+      - name: PR Deploy Instructions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = context.issue.number;
+            const hasLabel = context.payload.pull_request.labels.some(l => l.name === 'deployed');
+            
+            // Only comment if this is a new PR or doesn't have deployment comment yet
+            if (context.payload.action === 'opened') {
+              const comment = `## 🚀 Deploy Preview
+              
+              You can deploy this PR to the development environment for testing:
+              
+              ### Option 1: Comment Commands
+              - Comment \`/deploy\` or \`/deploy-dev\` to deploy this PR
+              - Comment \`/undeploy\` to remove the deployment
+              
+              ### Option 2: Manual Workflow
+              1. Go to [Actions](https://github.com/${context.repo.owner}/${context.repo.repo}/actions)
+              2. Select **"Deploy PR to Development"** workflow
+              3. Click **"Run workflow"**
+              4. Enter PR number: **${pr_number}**
+              
+              *Note: You need write permissions to deploy.*`;
+              
+              // Check if deploy comment already exists
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr_number
+              });
+              
+              const deployComment = comments.data.find(c => 
+                c.user.login === 'github-actions[bot]' && 
+                c.body.includes('Deploy Preview')
+              );
+              
+              if (!deployComment) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr_number,
+                  body: comment
+                });
+              }
+            }
+            
+            // Set status check
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: 'success',
+              context: 'Deploy Preview',
+              description: hasLabel ? 'Deployed to development' : 'Ready to deploy - use /deploy command',
+              target_url: hasLabel 
+                ? `https://pr-${pr_number}.dev.theedgestory.org`
+                : `https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${pr_number}#issuecomment-new`
+            });
+
+  cleanup-info:
+    name: Cleanup Deployment
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    
+    steps:
+      - name: Add cleanup reminder
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = context.issue.number;
+            const hasLabel = context.payload.pull_request.labels.some(l => l.name === 'deployed');
+            
+            if (hasLabel) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr_number,
+                body: '⚠️ **PR Closed**: Remember to clean up the deployment if it was deployed to development.'
+              });
+            }
