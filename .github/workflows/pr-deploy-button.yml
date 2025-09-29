@@ -9,14 +9,60 @@ jobs:
     name: Deploy to Dev Environment
     runs-on: ubuntu-latest
     if: github.event.action != 'closed'
+    permissions:
+      deployments: read
+      statuses: write
+      pull-requests: write
     
     steps:
+      - name: Check for existing deployments
+        id: check_deployments
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get deployments for this ref
+            const deployments = await github.rest.repos.listDeployments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.payload.pull_request.head.ref,
+              per_page: 10
+            });
+            
+            // Find PR-specific deployments
+            const prDeployments = deployments.data.filter(d => 
+              d.environment && d.environment.includes(`pr-${context.issue.number}`)
+            );
+            
+            let hasActiveDeployment = false;
+            let deploymentUrl = '';
+            
+            if (prDeployments.length > 0) {
+              // Get the latest deployment status
+              const latestDeployment = prDeployments[0];
+              const statuses = await github.rest.repos.listDeploymentStatuses({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: latestDeployment.id
+              });
+              
+              if (statuses.data.length > 0 && statuses.data[0].state === 'success') {
+                hasActiveDeployment = true;
+                deploymentUrl = `https://pr-${context.issue.number}.dev.theedgestory.org`;
+              }
+            }
+            
+            core.setOutput('has_deployment', hasActiveDeployment);
+            core.setOutput('deployment_url', deploymentUrl);
+            
+            return { hasActiveDeployment, deploymentUrl };
+      
       - name: PR Deploy Instructions
         uses: actions/github-script@v7
         with:
           script: |
             const pr_number = context.issue.number;
-            const hasLabel = context.payload.pull_request.labels.some(l => l.name === 'deployed');
+            const hasDeployment = '${{ steps.check_deployments.outputs.has_deployment }}' === 'true';
+            const deploymentUrl = '${{ steps.check_deployments.outputs.deployment_url }}';
             
             // Only comment if this is a new PR or doesn't have deployment comment yet
             if (context.payload.action === 'opened') {
@@ -58,16 +104,18 @@ jobs:
               }
             }
             
-            // Set status check
+            // Set status check based on actual deployment status
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha: context.payload.pull_request.head.sha,
               state: 'success',
               context: 'Deploy Preview',
-              description: hasLabel ? 'Deployed to development' : 'Ready to deploy - use /deploy command',
-              target_url: hasLabel 
-                ? `https://pr-${pr_number}.dev.theedgestory.org`
+              description: hasDeployment 
+                ? `Deployed to ${deploymentUrl}` 
+                : 'Ready to deploy - use /deploy command',
+              target_url: hasDeployment 
+                ? deploymentUrl
                 : `https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${pr_number}#issuecomment-new`
             });
 

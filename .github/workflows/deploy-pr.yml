@@ -99,8 +99,45 @@ jobs:
       packages: write
       pull-requests: write
       issues: write
+      deployments: write
     
     steps:
+      - name: Create GitHub deployment
+        id: deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: '${{ needs.check-permission.outputs.pr_sha }}',
+              task: 'deploy:pr',
+              auto_merge: false,
+              required_contexts: [],
+              environment: 'pr-${{ needs.check-permission.outputs.pr_number }}',
+              description: 'Deploy PR #${{ needs.check-permission.outputs.pr_number }} to development',
+              transient_environment: true,
+              production_environment: false,
+              payload: {
+                pr_number: '${{ needs.check-permission.outputs.pr_number }}',
+                pr_branch: '${{ needs.check-permission.outputs.pr_branch }}',
+                target_url: 'https://pr-${{ needs.check-permission.outputs.pr_number }}.dev.theedgestory.org'
+              }
+            });
+            
+            core.setOutput('deployment_id', deployment.data.id);
+            
+            // Set initial status
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deployment.data.id,
+              state: 'in_progress',
+              environment_url: 'https://pr-${{ needs.check-permission.outputs.pr_number }}.dev.theedgestory.org',
+              description: 'Deployment in progress...'
+            });
+            
+            return deployment.data;
       - name: Add deploying comment
         if: github.event_name == 'issue_comment'
         uses: actions/github-script@v7
@@ -230,17 +267,17 @@ jobs:
               body: comment
             });
       
-      - name: Add deployment status
+      - name: Update deployment status to success
         uses: actions/github-script@v7
         with:
           script: |
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              deployment_id: context.payload.deployment?.id || 0,
+              deployment_id: ${{ steps.deployment.outputs.deployment_id }},
               state: 'success',
-              environment_url: `https://pr-${{ needs.check-permission.outputs.pr_number }}.dev.theedgestory.org`,
-              description: 'PR deployed to development'
+              environment_url: 'https://pr-${{ needs.check-permission.outputs.pr_number }}.dev.theedgestory.org',
+              description: 'PR successfully deployed to development'
             });
 
   cleanup-pr:
