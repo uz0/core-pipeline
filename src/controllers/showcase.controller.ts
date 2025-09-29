@@ -918,6 +918,26 @@ export class ShowcaseController {
     }
   }
 
+  @Get('batch-processing')
+  @ApiOperation({
+    summary: 'Run Batch Processing Test (GET)',
+    description: 'Process multiple calls concurrently',
+  })
+  @ApiQuery({
+    name: 'count',
+    required: false,
+    type: Number,
+    description: 'Number of items to process',
+    example: 50,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch processing test completed',
+  })
+  async runBatchProcessingGet(@Query('count') count = '50'): Promise<ShowcaseResult> {
+    return this.runBatchProcessing(count);
+  }
+
   @Post('test/batch-processing')
   @ApiOperation({
     summary: 'Run Batch Processing Test',
@@ -1074,6 +1094,26 @@ export class ShowcaseController {
         details: { error: error.message, tests },
       };
     }
+  }
+
+  @Get('performance-test')
+  @ApiOperation({
+    summary: 'Run Performance Test (GET)',
+    description: 'Run performance benchmarks for all operations',
+  })
+  @ApiQuery({
+    name: 'iterations',
+    required: false,
+    type: Number,
+    description: 'Number of iterations for each test',
+    example: 100,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Performance test completed',
+  })
+  async runPerformanceTestGet(@Query('iterations') iterations = '100'): Promise<ShowcaseResult> {
+    return this.runPerformanceTest(iterations);
   }
 
   @Post('test/performance')
