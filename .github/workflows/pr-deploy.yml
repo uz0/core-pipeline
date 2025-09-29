@@ -2,7 +2,8 @@ name: PR Deploy Link
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 jobs:
   add-deploy-link:
@@ -10,15 +11,38 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
+      statuses: write
     
     steps:
       - name: Add deployment link comment
         uses: actions/github-script@v7
         with:
           script: |
-            const pr = context.payload.pull_request;
+            let pr;
+            
+            // Handle both PR events and manual trigger
+            if (context.eventName === 'workflow_dispatch') {
+              // For manual trigger, find open PRs for current branch
+              const branch = context.ref.replace('refs/heads/', '');
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${branch}`,
+                state: 'open'
+              });
+              
+              if (prs.length === 0) {
+                console.log('No open PRs found for this branch');
+                return;
+              }
+              pr = prs[0];
+            } else {
+              pr = context.payload.pull_request;
+            }
+            
             const branch = pr.head.ref;
             const sha = pr.head.sha.substring(0, 7);
+            const deployUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/deploy.yml`;
             
             // Check if we already commented
             const comments = await github.rest.issues.listComments({
@@ -32,9 +56,8 @@ jobs:
               c.body.includes('Deploy to Development')
             );
             
-            if (!hasDeployComment && context.payload.action === 'opened') {
-              const deployUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/deploy.yml`;
-              
+            // Add comment if it doesn't exist (removed the "opened" check)
+            if (!hasDeployComment) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
