@@ -21,14 +21,25 @@ export class KafkaConsumerService implements OnModuleInit {
   ) {
     // Only initialize Kafka if not in test environment
     if (process.env.NODE_ENV !== 'test') {
-      this.kafka = new Kafka({
-        clientId: this.configService.get('KAFKA_CLIENT_ID', 'core-pipeline'),
-        brokers: [this.configService.get('KAFKA_BROKER', 'localhost:9092')],
-      });
+      try {
+        this.kafka = new Kafka({
+          clientId: this.configService.get('KAFKA_CLIENT_ID', 'core-pipeline'),
+          brokers: [this.configService.get('KAFKA_BROKER', 'localhost:9092')],
+          retry: {
+            retries: 3,
+            initialRetryTime: 100,
+            maxRetryTime: 1000,
+          },
+        });
 
-      this.consumer = this.kafka.consumer({
-        groupId: this.configService.get('KAFKA_CONSUMER_GROUP', 'core-pipeline-group'),
-      });
+        this.consumer = this.kafka.consumer({
+          groupId: this.configService.get('KAFKA_CONSUMER_GROUP', 'core-pipeline-group'),
+        });
+      } catch (error) {
+        this.logger.warn(`Failed to initialize Kafka: ${error.message}`);
+        this.kafka = null;
+        this.consumer = null;
+      }
     }
   }
 
@@ -40,12 +51,17 @@ export class KafkaConsumerService implements OnModuleInit {
     }
 
     if (!this.consumer) {
-      this.logger.warn('Kafka consumer not initialized');
+      this.logger.warn('Kafka consumer not available - running without Kafka support');
       return;
     }
 
     try {
-      await this.consumer.connect();
+      await Promise.race([
+        this.consumer.connect(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Kafka connection timeout')), 5000)
+        ),
+      ]);
       this.logger.log('Kafka consumer connected');
 
       const defaultTopics = ['user-events', 'system-events', 'showcase-events', 'call-events'];

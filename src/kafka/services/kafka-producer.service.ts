@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 @Injectable()
 export class KafkaProducerService implements OnModuleInit {
   private readonly logger = new Logger(KafkaProducerService.name);
+  private isConnected = false;
 
   constructor(
     @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
@@ -14,8 +15,20 @@ export class KafkaProducerService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.kafkaClient.connect();
-    this.logger.log('Kafka producer connected');
+    try {
+      await Promise.race([
+        this.kafkaClient.connect(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Kafka connection timeout')), 5000)
+        ),
+      ]);
+      this.isConnected = true;
+      this.logger.log('Kafka producer connected');
+    } catch (error) {
+      this.logger.warn(`Kafka producer connection failed: ${error.message}`);
+      this.logger.warn('Running without Kafka support - messages will be stored locally only');
+      this.isConnected = false;
+    }
   }
 
   async produce(
@@ -34,17 +47,22 @@ export class KafkaProducerService implements OnModuleInit {
         headers,
       });
 
-      await this.kafkaClient
-        .emit(topic, {
-          key,
-          value: message,
-          headers: {
-            ...headers,
-            messageId,
-            timestamp,
-          },
-        })
-        .toPromise();
+      // If Kafka is connected, try to send the message
+      if (this.isConnected) {
+        await this.kafkaClient
+          .emit(topic, {
+            key,
+            value: message,
+            headers: {
+              ...headers,
+              messageId,
+              timestamp,
+            },
+          })
+          .toPromise();
+      } else {
+        this.logger.warn(`Kafka not connected. Storing message locally only.`);
+      }
 
       const kafkaEvent = {
         id: messageId,

@@ -16,19 +16,36 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
     };
   }
 
+  // Use SQLite for minimal development mode (no Docker required)
+  if (process.env.MINIMAL_DEV === 'true') {
+    return {
+      type: 'sqlite',
+      database: './dev.sqlite',
+      entities: [Call],
+      synchronize: true,
+      logging: process.env.DB_LOGGING === 'true',
+      migrations: [__dirname + '/../../migrations/*.{ts,js}'],
+      migrationsTableName: 'migrations',
+    };
+  }
+
+  // Determine database name based on environment
+  const dbName = process.env.DB_DATABASE || 
+    (process.env.NODE_ENV === 'production' ? 'core_pipeline' : 'core_pipeline_dev');
+
   return {
     type: 'postgres',
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT, 10) || 5432,
     username: process.env.DB_USERNAME || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
-    database: process.env.DB_DATABASE || 'core_pipeline',
+    database: dbName,
     entities: [Call],
-    synchronize: process.env.NODE_ENV !== 'production',
+    synchronize: process.env.NODE_ENV === 'development',
     logging: process.env.DB_LOGGING === 'true',
-    migrations: ['dist/migrations/*.js'],
+    migrations: [__dirname + '/../../migrations/*.{ts,js}'],
     migrationsTableName: 'migrations',
-    migrationsRun: true,
+    migrationsRun: process.env.NODE_ENV !== 'production', // Auto-run in dev, manual in prod
     retryAttempts: 3,
     retryDelay: 3000,
   };

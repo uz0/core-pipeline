@@ -9,9 +9,12 @@ async function bootstrap() {
   try {
     initTracing();
 
+    // Use default NestJS logger for development (pretty), custom for production (JSON)
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+
     const app = await NestFactory.create(AppModule, {
-      logger: new LoggerService(),
-      bufferLogs: true,
+      logger: isDevelopment ? ['error', 'warn', 'log', 'debug', 'verbose'] : new LoggerService(),
+      bufferLogs: false,
     });
 
     // Enable validation pipe globally
