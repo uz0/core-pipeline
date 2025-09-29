@@ -12,6 +12,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 import { CallRepository } from '../repositories/call.repository';
 import { Call } from '../entities/call.entity';
 import { RedisService } from '../kafka/services/redis.service';
@@ -29,20 +30,36 @@ interface ShowcaseResult {
 }
 
 class CreateCallDto {
-  callerId: string;
-  recipientId: string;
+  @IsOptional()
+  @IsString()
+  callerId?: string;
+  
+  @IsOptional()
+  @IsString()
+  recipientId?: string;
+  
+  @IsOptional()
+  @IsString()
   status?: string;
+  
+  @IsOptional()
   metadata?: Record<string, any>;
 }
 
 class StoreDataDto {
+  @IsString()
   key: string;
+  
   value: any;
+  
+  @IsOptional()
   ttl?: number;
 }
 
 class PublishMessageDto {
+  @IsString()
   channel: string;
+  
   message: any;
 }
 

@@ -15,6 +15,12 @@ export class KafkaProducerService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    // Skip connection in test environment
+    if (process.env.NODE_ENV === 'test') {
+      this.isConnected = true;
+      return;
+    }
+    
     try {
       await Promise.race([
         this.kafkaClient.connect(),

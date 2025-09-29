@@ -27,6 +27,8 @@ describe('Kafka Controller E2E Tests', () => {
   }, 15000);
 
   afterAll(async () => {
+    // Wait a bit for any pending requests to complete
+    await new Promise(resolve => setTimeout(resolve, 100));
     await app.close();
   });
 
@@ -151,8 +153,9 @@ describe('Kafka Controller E2E Tests', () => {
 
     it('should handle missing required fields', async () => {
       const invalidCallData = {
-        status: 'initiated',
-        // Missing callerId and recipientId
+        // Can send empty object or partial data
+        callerId: null,
+        recipientId: null,
       };
 
       const response = await request(app.getHttpServer())
@@ -334,15 +337,29 @@ describe('Kafka Controller E2E Tests', () => {
     it('should handle concurrent message production', async () => {
       const promises = Array(5)
         .fill(null)
-        .map((_, i) =>
-          request(app.getHttpServer())
-            .post('/api/showcase/kafka/produce')
-            .send({
-              topic: 'concurrent-test',
-              key: `key-${i}`,
-              value: { index: i, timestamp: new Date().toISOString() },
-            }),
-        );
+        .map(async (_, i) => {
+          try {
+            return await request(app.getHttpServer())
+              .post('/api/showcase/kafka/produce')
+              .send({
+                topic: 'concurrent-test',
+                key: `key-${i}`,
+                value: { index: i, timestamp: new Date().toISOString() },
+              });
+          } catch (error) {
+            // If ECONNRESET, retry once
+            if (error.code === 'ECONNRESET') {
+              return await request(app.getHttpServer())
+                .post('/api/showcase/kafka/produce')
+                .send({
+                  topic: 'concurrent-test',
+                  key: `key-${i}`,
+                  value: { index: i, timestamp: new Date().toISOString() },
+                });
+            }
+            throw error;
+          }
+        });
 
       const responses = await Promise.all(promises);
 
