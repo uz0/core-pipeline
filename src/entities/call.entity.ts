@@ -17,9 +17,14 @@ export class Call {
   @Column({ type: 'int', nullable: true })
   duration: number;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: process.env.NODE_ENV === 'test' ? 'simple-json' : 'jsonb',
+    nullable: true,
+  })
   metadata: Record<string, any>;
 
-  @CreateDateColumn({ type: 'timestamp with time zone' })
+  @CreateDateColumn({
+    type: process.env.NODE_ENV === 'test' ? 'datetime' : 'timestamp with time zone',
+  })
   createdAt: Date;
 }

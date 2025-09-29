@@ -4,14 +4,21 @@ import { getQueueToken } from '@nestjs/bull';
 import { RedisService } from '../../kafka/services/redis.service';
 
 jest.mock('ioredis', () => {
-  return jest.fn(() => ({
+  const mRedis = {
     setex: jest.fn(),
     set: jest.fn(),
     get: jest.fn(),
     del: jest.fn(),
     exists: jest.fn(),
     ping: jest.fn(),
-  }));
+    duplicate: jest.fn().mockReturnThis(),
+    subscribe: jest.fn(),
+    publish: jest.fn(),
+    on: jest.fn(),
+  };
+  return {
+    default: jest.fn(() => mRedis),
+  };
 });
 
 describe('RedisService', () => {

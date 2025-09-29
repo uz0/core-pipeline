@@ -180,11 +180,12 @@ describe('CallRepository', () => {
 
     it('should return null if call not found', async () => {
       jest.spyOn(repository, 'findCallById').mockResolvedValue(null);
+      const saveSpy = jest.spyOn(repository, 'save');
 
       const result = await repository.updateCallStatus('non-existent', 'completed');
 
       expect(result).toBeNull();
-      expect(repository.save).not.toHaveBeenCalled();
+      expect(saveSpy).not.toHaveBeenCalled();
     });
   });
 

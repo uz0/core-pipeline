@@ -24,8 +24,11 @@ describe('Kafka Controller E2E Tests', () => {
   });
 
   beforeEach(async () => {
-    // Clean up database
-    await callRepository.delete({});
+    // Clean up database - find and delete all calls
+    const calls = await callRepository.find();
+    if (calls.length > 0) {
+      await callRepository.remove(calls);
+    }
   });
 
   describe('POST /api/showcase/kafka/produce', () => {
@@ -55,7 +58,7 @@ describe('Kafka Controller E2E Tests', () => {
       };
 
       await request(app.getHttpServer())
-        .post('/api/kafka/produce')
+        .post('/api/showcase/kafka/produce')
         .send(invalidMessage)
         .expect(400);
     });
@@ -70,7 +73,7 @@ describe('Kafka Controller E2E Tests', () => {
 
     it('should filter messages by topic', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/kafka?topic=user-events')
+        .get('/api/showcase/kafka/messages?topic=user-events')
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
@@ -81,7 +84,7 @@ describe('Kafka Controller E2E Tests', () => {
 
     it('should filter messages by status', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/kafka?status=processed')
+        .get('/api/showcase/kafka/messages?status=processed')
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
@@ -93,7 +96,7 @@ describe('Kafka Controller E2E Tests', () => {
     it('should limit number of messages', async () => {
       const limit = 5;
       const response = await request(app.getHttpServer())
-        .get(`/api/kafka?limit=${limit}`)
+        .get(`/api/showcase/kafka/messages?limit=${limit}`)
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
@@ -101,9 +104,9 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('GET /api/kafka/stats', () => {
+  describe('GET /api/showcase/kafka/stats', () => {
     it('should return Kafka statistics', async () => {
-      const response = await request(app.getHttpServer()).get('/api/kafka/stats').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/showcase/kafka/stats').expect(200);
 
       expect(response.body).toHaveProperty('total');
       expect(response.body).toHaveProperty('byTopic');
@@ -113,7 +116,7 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('POST /api/kafka/calls', () => {
+  describe('POST /api/showcase/calls', () => {
     it('should create a new call', async () => {
       const callData = {
         callerId: 'e2e-caller-001',
@@ -123,7 +126,7 @@ describe('Kafka Controller E2E Tests', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/calls')
+        .post('/api/showcase/calls')
         .send(callData)
         .expect(201);
 
@@ -142,7 +145,7 @@ describe('Kafka Controller E2E Tests', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/calls')
+        .post('/api/showcase/calls')
         .send(invalidCallData)
         .expect(201); // Still creates with null values
 
@@ -151,7 +154,7 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('GET /api/kafka/calls', () => {
+  describe('GET /api/showcase/calls', () => {
     beforeEach(async () => {
       // Create test calls
       const calls = [
@@ -166,7 +169,7 @@ describe('Kafka Controller E2E Tests', () => {
     });
 
     it('should retrieve all calls', async () => {
-      const response = await request(app.getHttpServer()).get('/api/kafka/calls').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/showcase/calls').expect(200);
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('count', 3);
@@ -175,7 +178,7 @@ describe('Kafka Controller E2E Tests', () => {
     });
 
     it('should return calls sorted by createdAt DESC', async () => {
-      const response = await request(app.getHttpServer()).get('/api/kafka/calls').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/showcase/calls').expect(200);
 
       const calls = response.body.calls;
       for (let i = 1; i < calls.length; i++) {
@@ -186,9 +189,9 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('POST /api/kafka/redis/test', () => {
+  describe('POST /api/showcase/redis/test', () => {
     it('should test Redis functionality', async () => {
-      const response = await request(app.getHttpServer()).post('/api/kafka/redis/test').expect(200);
+      const response = await request(app.getHttpServer()).post('/api/showcase/redis/test').expect(200);
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('redisConnected');
@@ -199,10 +202,10 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('GET /api/kafka/queue/status', () => {
+  describe('GET /api/showcase/queue/status', () => {
     it('should return queue status', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/kafka/queue/status')
+        .get('/api/showcase/queue/status')
         .expect(200);
 
       expect(response.body).toHaveProperty('success', true);
@@ -214,7 +217,7 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('POST /api/kafka/produce-batch', () => {
+  describe('POST /api/showcase/kafka/produce-batch', () => {
     it('should produce multiple messages', async () => {
       const batchData = {
         topic: 'batch-test',
@@ -226,7 +229,7 @@ describe('Kafka Controller E2E Tests', () => {
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/produce-batch')
+        .post('/api/showcase/kafka/produce-batch')
         .send(batchData)
         .expect(201);
 
@@ -240,10 +243,10 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('POST /api/kafka/subscribe', () => {
+  describe('POST /api/showcase/kafka/subscribe', () => {
     it('should subscribe to a new topic', async () => {
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/subscribe')
+        .post('/api/showcase/kafka/subscribe')
         .send({ topic: 'new-test-topic' })
         .expect(200);
 
@@ -256,13 +259,13 @@ describe('Kafka Controller E2E Tests', () => {
     it('should handle duplicate subscription gracefully', async () => {
       // Subscribe first time
       await request(app.getHttpServer())
-        .post('/api/kafka/subscribe')
+        .post('/api/showcase/kafka/subscribe')
         .send({ topic: 'duplicate-topic' })
         .expect(200);
 
       // Subscribe again to same topic
       const response = await request(app.getHttpServer())
-        .post('/api/kafka/subscribe')
+        .post('/api/showcase/kafka/subscribe')
         .send({ topic: 'duplicate-topic' })
         .expect(200);
 
@@ -270,9 +273,9 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('GET /api/kafka/topics', () => {
+  describe('GET /api/showcase/kafka/topics', () => {
     it('should return subscribed topics', async () => {
-      const response = await request(app.getHttpServer()).get('/api/kafka/topics').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/showcase/kafka/topics').expect(200);
 
       expect(response.body).toHaveProperty('topics');
       expect(response.body.topics).toBeInstanceOf(Array);
@@ -280,14 +283,11 @@ describe('Kafka Controller E2E Tests', () => {
     });
   });
 
-  describe('GET /api/kafka/:id', () => {
+  describe('GET /api/showcase/kafka/messages/:id', () => {
     it('should return 404 for non-existent message', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/kafka/non-existent-id')
-        .expect(200);
-
-      expect(response.body).toHaveProperty('statusCode', 404);
-      expect(response.body).toHaveProperty('message', 'Message not found');
+        .get('/api/showcase/kafka/messages/non-existent-id')
+        .expect(404);
     });
   });
 
@@ -297,7 +297,7 @@ describe('Kafka Controller E2E Tests', () => {
         .fill(null)
         .map((_, i) =>
           request(app.getHttpServer())
-            .post('/api/kafka/calls')
+            .post('/api/showcase/calls')
             .send({
               callerId: `concurrent-caller-${i}`,
               recipientId: `concurrent-recipient-${i}`,
@@ -321,7 +321,7 @@ describe('Kafka Controller E2E Tests', () => {
         .fill(null)
         .map((_, i) =>
           request(app.getHttpServer())
-            .post('/api/kafka/produce')
+            .post('/api/showcase/kafka/produce')
             .send({
               topic: 'concurrent-test',
               key: `key-${i}`,

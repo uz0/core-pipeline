@@ -28,8 +28,11 @@ describe('CallController (e2e)', () => {
   });
 
   beforeEach(async () => {
-    // Clean up database before each test
-    await callRepository.delete({});
+    // Clean up database before each test - find and delete all calls
+    const calls = await callRepository.find();
+    if (calls.length > 0) {
+      await callRepository.remove(calls);
+    }
   });
 
   describe('/api/showcase/calls (GET)', () => {
