@@ -1,14 +1,23 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { KafkaController } from './controllers/kafka.controller';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bull';
 import { KafkaProducerService } from './services/kafka-producer.service';
 import { KafkaConsumerService } from './services/kafka-consumer.service';
 import { EventStorageService } from './services/event-storage.service';
+import { Call } from '../entities/call.entity';
+import { CallRepository } from '../repositories/call.repository';
+import { RedisService } from './services/redis.service';
+import { CallProcessor } from './processors/call.processor';
 
 @Module({
   imports: [
     ConfigModule,
+    TypeOrmModule.forFeature([Call]),
+    BullModule.registerQueue({
+      name: 'call-queue',
+    }),
     ClientsModule.registerAsync([
       {
         name: 'KAFKA_SERVICE',
@@ -29,8 +38,21 @@ import { EventStorageService } from './services/event-storage.service';
       },
     ]),
   ],
-  controllers: [KafkaController],
-  providers: [KafkaProducerService, KafkaConsumerService, EventStorageService],
-  exports: [KafkaProducerService, KafkaConsumerService],
+  controllers: [], // Controllers moved to app.module.ts for better organization
+  providers: [
+    KafkaProducerService,
+    KafkaConsumerService,
+    EventStorageService,
+    CallRepository,
+    RedisService,
+    CallProcessor,
+  ],
+  exports: [
+    KafkaProducerService,
+    KafkaConsumerService,
+    EventStorageService,
+    CallRepository,
+    RedisService,
+  ],
 })
 export class KafkaModule {}

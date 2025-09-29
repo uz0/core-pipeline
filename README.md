@@ -4,6 +4,7 @@ A production-ready NestJS REST API with full observability stack including Prome
 
 ## Features
 
+### Core Infrastructure
 - **REST API** with health checks and status endpoints
 - **Swagger/OpenAPI** documentation at `/api-docs`
 - **Prometheus metrics** endpoint at `/metrics`
@@ -14,7 +15,31 @@ A production-ready NestJS REST API with full observability stack including Prome
 - **Helm charts** for deployment via ArgoCD
 - **GitHub Actions** CI/CD pipeline with GHCR integration
 
-## Endpoints
+### Data Layer (TypeORM + PostgreSQL)
+- **Call Entity Management**: Complete CRUD operations for call tracking
+- **Repository Pattern**: Clean data access layer with custom repository methods  
+- **Migrations**: Database version control with TypeORM migrations
+- **Indexes**: Optimized queries with proper database indexing
+
+### Message Streaming (Kafka)
+- **Producer/Consumer**: Full Kafka integration for event-driven architecture
+- **Multiple Topics**: Support for user-events, system-events, showcase-events, and call-events
+- **Batch Processing**: Efficient batch message production
+- **Event Storage**: In-memory event tracking and statistics
+
+### Caching & Queuing (Redis + Bull)
+- **Redis Caching**: Fast data retrieval with TTL support
+- **Bull Queue**: Background job processing with retry mechanisms
+- **Pub/Sub**: Real-time event broadcasting
+- **Call Processing**: Asynchronous call handling with queue workers
+
+## API Endpoints
+
+### Complete API Documentation
+
+Full interactive API documentation is available at `/api-docs` when the application is running.
+
+### Health & Monitoring
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -24,6 +49,60 @@ A production-ready NestJS REST API with full observability stack including Prome
 | `/ok` | GET | Simple status check |
 | `/metrics` | GET | Prometheus metrics |
 | `/api-docs` | GET | Swagger documentation |
+
+### Kafka Operations
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/kafka/produce` | POST | Produce message to Kafka |
+| `/api/kafka/produce-batch` | POST | Produce multiple messages |
+| `/api/kafka` | GET | Get all consumed messages |
+| `/api/kafka/stats` | GET | Get Kafka statistics |
+| `/api/kafka/topics` | GET | Get subscribed topics |
+| `/api/kafka/subscribe` | POST | Subscribe to new topic |
+
+### Call Management API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/calls` | GET | Get all calls with filtering and pagination |
+| `/api/calls/stats` | GET | Get call statistics |
+| `/api/calls/:id` | GET | Get specific call by ID |
+| `/api/calls` | POST | Create new call |
+| `/api/calls/:id` | PATCH | Update call |
+| `/api/calls/:id/status/:status` | PATCH | Update call status |
+| `/api/calls/:id` | DELETE | Delete call |
+| `/api/calls/status/:status` | GET | Get calls by status |
+| `/api/calls/recent/:limit` | GET | Get recent calls |
+
+### Redis Operations API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/redis/health` | GET | Check Redis connection status |
+| `/api/redis/cache` | POST | Store data in cache |
+| `/api/redis/cache/:key` | GET | Retrieve cached data |
+| `/api/redis/cache/:key` | DELETE | Delete cached data |
+| `/api/redis/exists/:key` | GET | Check if key exists |
+| `/api/redis/pubsub/publish` | POST | Publish message to channel |
+| `/api/redis/pubsub/subscribe/:channel` | POST | Subscribe to channel |
+| `/api/redis/queue/status` | GET | Get queue status |
+| `/api/redis/queue` | POST | Add job to queue |
+| `/api/redis/test` | POST | Run comprehensive Redis test |
+
+### Showcase Scenarios API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/showcase` | GET | List available showcase scenarios |
+| `/api/showcase/basic-flow` | GET | Run basic CRUD flow |
+| `/api/showcase/kafka-integration` | GET | Run Kafka integration test |
+| `/api/showcase/redis-operations` | GET | Run Redis operations test |
+| `/api/showcase/batch-processing` | GET | Run batch processing test |
+| `/api/showcase/error-recovery` | GET | Run error recovery test |
+| `/api/showcase/performance-test` | GET | Run performance test |
+| `/api/showcase/full-integration` | GET | Run full integration test |
+| `/api/showcase/run-all` | GET | Run all showcase scenarios |
 
 ## Development
 
