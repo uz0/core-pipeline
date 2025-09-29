@@ -96,7 +96,7 @@ describe('KafkaController (e2e)', () => {
     });
   });
 
-  describe('/api/kafka (GET)', () => {
+  describe('/api/showcase/kafka/messages (GET)', () => {
     it('should retrieve all consumed messages', async () => {
       // First produce a message
       await request(app.getHttpServer())
@@ -109,7 +109,9 @@ describe('KafkaController (e2e)', () => {
       // Wait for consumption
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const response = await request(app.getHttpServer()).get('/api/kafka').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/api/showcase/kafka/messages')
+        .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
     });
@@ -133,7 +135,7 @@ describe('KafkaController (e2e)', () => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const response = await request(app.getHttpServer())
-        .get('/api/kafka?topic=user-events')
+        .get('/api/showcase/kafka/messages?topic=user-events')
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
@@ -144,7 +146,7 @@ describe('KafkaController (e2e)', () => {
 
     it('should filter messages by status', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/kafka?status=processed')
+        .get('/api/showcase/kafka/messages?status=processed')
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
@@ -154,16 +156,20 @@ describe('KafkaController (e2e)', () => {
     });
 
     it('should limit number of messages', async () => {
-      const response = await request(app.getHttpServer()).get('/api/kafka?limit=5').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/api/showcase/kafka/messages?limit=5')
+        .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body.length).toBeLessThanOrEqual(5);
     });
   });
 
-  describe('/api/kafka/stats (GET)', () => {
+  describe('/api/showcase/kafka/stats (GET)', () => {
     it('should get Kafka statistics', async () => {
-      const response = await request(app.getHttpServer()).get('/api/kafka/stats').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/api/showcase/kafka/stats')
+        .expect(200);
 
       expect(response.body).toHaveProperty('total');
       expect(response.body).toHaveProperty('byTopic');
@@ -173,9 +179,11 @@ describe('KafkaController (e2e)', () => {
     });
   });
 
-  describe('/api/kafka/topics (GET)', () => {
+  describe('/api/showcase/kafka/topics (GET)', () => {
     it('should get subscribed topics', async () => {
-      const response = await request(app.getHttpServer()).get('/api/kafka/topics').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/api/showcase/kafka/topics')
+        .expect(200);
 
       expect(response.body).toHaveProperty('topics');
       expect(Array.isArray(response.body.topics)).toBe(true);

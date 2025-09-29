@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { TestAppModule } from '../../../test/test-app.module';
 import { CallRepository } from '../../repositories/call.repository';
@@ -14,6 +14,13 @@ describe('Kafka Controller E2E Tests', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+      }),
+    );
     await app.init();
 
     callRepository = app.get<CallRepository>(CallRepository);
@@ -66,7 +73,9 @@ describe('Kafka Controller E2E Tests', () => {
 
   describe('GET /api/showcase/kafka/messages', () => {
     it('should retrieve all messages', async () => {
-      const response = await request(app.getHttpServer()).get('/api/showcase/kafka/messages').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/api/showcase/kafka/messages')
+        .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
     });
@@ -106,7 +115,9 @@ describe('Kafka Controller E2E Tests', () => {
 
   describe('GET /api/showcase/kafka/stats', () => {
     it('should return Kafka statistics', async () => {
-      const response = await request(app.getHttpServer()).get('/api/showcase/kafka/stats').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/api/showcase/kafka/stats')
+        .expect(200);
 
       expect(response.body).toHaveProperty('total');
       expect(response.body).toHaveProperty('byTopic');
@@ -191,7 +202,9 @@ describe('Kafka Controller E2E Tests', () => {
 
   describe('POST /api/showcase/redis/test', () => {
     it('should test Redis functionality', async () => {
-      const response = await request(app.getHttpServer()).post('/api/showcase/redis/test').expect(200);
+      const response = await request(app.getHttpServer())
+        .post('/api/showcase/redis/test')
+        .expect(200);
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('redisConnected');
@@ -275,7 +288,9 @@ describe('Kafka Controller E2E Tests', () => {
 
   describe('GET /api/showcase/kafka/topics', () => {
     it('should return subscribed topics', async () => {
-      const response = await request(app.getHttpServer()).get('/api/showcase/kafka/topics').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/api/showcase/kafka/topics')
+        .expect(200);
 
       expect(response.body).toHaveProperty('topics');
       expect(response.body.topics).toBeInstanceOf(Array);

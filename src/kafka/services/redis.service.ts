@@ -60,7 +60,7 @@ export class RedisService {
 
   async subscribe(channel: string, callback: (message: any) => void): Promise<void> {
     if (process.env.NODE_ENV === 'test') return;
-    
+
     const subClient = new Redis({
       host: this.configService.get('REDIS_HOST', 'localhost'),
       port: this.configService.get('REDIS_PORT', 6379),
@@ -99,6 +99,16 @@ export class RedisService {
       return true;
     } catch (error) {
       console.error('Redis connection test failed:', error);
+      return false;
+    }
+  }
+
+  async ping(): Promise<boolean> {
+    if (!this.redisClient) return false;
+    try {
+      const result = await this.redisClient.ping();
+      return result === 'PONG';
+    } catch (error) {
       return false;
     }
   }

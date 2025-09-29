@@ -53,7 +53,7 @@ export class MockEventStorageService {
   private events: any[] = [];
 
   getEvent(id: string) {
-    return this.events.find(e => e.id === id);
+    return this.events.find((e) => e.id === id);
   }
 
   getAllEvents() {
@@ -61,7 +61,7 @@ export class MockEventStorageService {
   }
 
   getEventsByTopic(topic: string) {
-    return this.events.filter(e => e.topic === topic);
+    return this.events.filter((e) => e.topic === topic);
   }
 
   getStats() {
@@ -153,12 +153,7 @@ export class MockRedisService {
     }),
     TerminusModule,
   ],
-  controllers: [
-    AppController,
-    HealthController,
-    MetricsController,
-    ShowcaseController,
-  ],
+  controllers: [AppController, HealthController, MetricsController, ShowcaseController],
   providers: [
     LoggerService,
     MetricsService,

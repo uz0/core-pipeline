@@ -173,7 +173,9 @@ describe('CallController (e2e)', () => {
         status: 'initiated',
       });
 
-      const response = await request(app.getHttpServer()).get(`/api/showcase/calls/${call.id}`).expect(200);
+      const response = await request(app.getHttpServer())
+        .get(`/api/showcase/calls/${call.id}`)
+        .expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.call.id).toBe(call.id);

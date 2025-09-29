@@ -27,7 +27,9 @@ describe('RedisController (e2e)', () => {
 
   describe('/api/showcase/redis/health (GET)', () => {
     it('should check Redis health', async () => {
-      const response = await request(app.getHttpServer()).get('/api/showcase/redis/health').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/api/showcase/redis/health')
+        .expect(200);
 
       expect(response.body).toHaveProperty('connected');
       expect(response.body).toHaveProperty('timestamp');
@@ -321,7 +323,9 @@ describe('RedisController (e2e)', () => {
 
   describe('/api/showcase/redis/test (POST)', () => {
     it('should run comprehensive Redis test', async () => {
-      const response = await request(app.getHttpServer()).post('/api/showcase/redis/test').expect(200);
+      const response = await request(app.getHttpServer())
+        .post('/api/showcase/redis/test')
+        .expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.tests).toBeDefined();

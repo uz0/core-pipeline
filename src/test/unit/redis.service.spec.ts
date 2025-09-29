@@ -47,7 +47,6 @@ describe('RedisService', () => {
       getJobCounts: jest.fn(),
     };
 
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RedisService,

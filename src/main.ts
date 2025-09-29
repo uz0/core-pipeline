@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { initTracing } from './telemetry/tracing';
@@ -12,6 +13,15 @@ async function bootstrap() {
       logger: new LoggerService(),
       bufferLogs: true,
     });
+
+    // Enable validation pipe globally
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+      }),
+    );
 
     // Enable CORS for the domains
     app.enableCors({
@@ -27,10 +37,10 @@ async function bootstrap() {
     });
 
     const port = process.env.PORT || 3000;
-    
+
     // Configure Swagger
     const isProduction = process.env.NODE_ENV === 'production';
-    
+
     const configBuilder = new DocumentBuilder()
       .setTitle('Core Pipeline API')
       .setDescription('Consolidated API for testing all system components - Database, Redis, Kafka')
@@ -38,7 +48,7 @@ async function bootstrap() {
       .addTag('showcase', 'Showcase API - All features consolidated')
       .addTag('health', 'Health check endpoints')
       .addTag('metrics', 'Metrics endpoints');
-    
+
     // Add appropriate servers based on environment
     if (isProduction) {
       configBuilder.addServer('https://core-pipeline.theedgestory.org', 'Production');
@@ -46,11 +56,11 @@ async function bootstrap() {
       configBuilder.addServer('https://core-pipeline.dev.theedgestory.org', 'Development');
     }
     configBuilder.addServer(`http://localhost:${port}`, 'Local');
-    
+
     const config = configBuilder.build();
-    
+
     const document = SwaggerModule.createDocument(app, config);
-    
+
     // Enable Swagger in development or if explicitly enabled in production
     if (!isProduction || process.env.ENABLE_SWAGGER === 'true') {
       SwaggerModule.setup('api-docs', app, document, {
@@ -60,7 +70,9 @@ async function bootstrap() {
       });
       console.log(`Swagger documentation available at: http://localhost:${port}/api-docs`);
     } else {
-      console.log('Swagger documentation is disabled in production. Set ENABLE_SWAGGER=true to enable.');
+      console.log(
+        'Swagger documentation is disabled in production. Set ENABLE_SWAGGER=true to enable.',
+      );
     }
     await app.listen(port);
 
