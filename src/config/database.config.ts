@@ -34,12 +34,24 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
     process.env.DB_DATABASE ||
     (process.env.NODE_ENV === 'production' ? 'core_pipeline' : 'core_pipeline_dev');
 
+  const host = process.env.DB_HOST || 'localhost';
+  const port = parseInt(process.env.DB_PORT, 10) || 5432;
+  const username = process.env.DB_USERNAME || 'postgres';
+  const password = process.env.DB_PASSWORD || 'postgres';
+
+  // Log database connection details (without full password)
+  console.log(`[Database] Connecting to PostgreSQL:`);
+  console.log(`  Host: ${host}:${port}`);
+  console.log(`  Database: ${dbName}`);
+  console.log(`  Username: ${username}`);
+  console.log(`  Password: ${password.length} chars, starts with '${password[0]}', ends with '${password[password.length - 1]}'`);
+
   return {
     type: 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT, 10) || 5432,
-    username: process.env.DB_USERNAME || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
+    host,
+    port,
+    username,
+    password,
     database: dbName,
     entities: [Call],
     synchronize: process.env.NODE_ENV === 'development',

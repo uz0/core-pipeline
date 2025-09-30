@@ -57,11 +57,18 @@ export class RedisService {
 
         if (url.password) {
           redisConfig.password = url.password;
+          // Log password details to help debug auth issues
+          this.logger.log(`Redis password: ${url.password.length} chars, starts with '${url.password[0]}', ends with '${url.password[url.password.length - 1]}'`);
+        } else {
+          this.logger.warn('No password in REDIS_URL!');
         }
 
         // Only set username if explicitly provided (Redis 6+ ACL)
         if (url.username && url.username !== '' && url.username !== 'default') {
           redisConfig.username = url.username;
+          this.logger.log(`Redis username: ${url.username}`);
+        } else {
+          this.logger.log('Redis username: (none - password-only auth)');
         }
 
         const sanitizedUrl = redisUrl.replace(/:[^:@]+@/, ':***@');
