@@ -4,9 +4,63 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { initTracing } from './telemetry/tracing';
 import { LoggerService } from './services/logger.service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 async function bootstrap() {
   try {
+    // Log version information at startup
+    console.log('='.repeat(80));
+    console.log('=== Core Pipeline Application Starting ===');
+    console.log('='.repeat(80));
+
+    // Read package.json version
+    const packageJsonPath = path.join(__dirname, '../package.json');
+    let appVersion = 'unknown';
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      appVersion = packageJson.version;
+    } catch (e) {
+      console.warn('Could not read package.json version');
+    }
+
+    console.log(`App Version: ${appVersion}`);
+    console.log(`Node Version: ${process.version}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Timestamp: ${new Date().toISOString()}`);
+
+    // Try to read Git commit info (if available)
+    try {
+      const gitHeadPath = path.join(__dirname, '../.git/HEAD');
+      if (fs.existsSync(gitHeadPath)) {
+        const headContent = fs.readFileSync(gitHeadPath, 'utf8').trim();
+        let commitHash = 'unknown';
+
+        if (headContent.startsWith('ref: ')) {
+          // It's a branch reference
+          const refPath = headContent.substring(5);
+          const refFile = path.join(__dirname, '../.git', refPath);
+          if (fs.existsSync(refFile)) {
+            commitHash = fs.readFileSync(refFile, 'utf8').trim().substring(0, 7);
+          }
+        } else {
+          // It's a direct commit hash
+          commitHash = headContent.substring(0, 7);
+        }
+
+        console.log(`Git Commit: ${commitHash}`);
+      }
+    } catch (e) {
+      console.log('Git Commit: N/A (not in git repo or running in container)');
+    }
+
+    // Log IMAGE_TAG if set (for Kubernetes deployments)
+    if (process.env.IMAGE_TAG) {
+      console.log(`Image Tag: ${process.env.IMAGE_TAG}`);
+    }
+
+    console.log('='.repeat(80));
+
     initTracing();
 
     // Use default NestJS logger for development (pretty), custom for production (JSON)
