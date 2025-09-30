@@ -64,7 +64,8 @@ jobs:
                 issue_number: pr.number,
                 body: `## 🚀 [Deploy this branch to development](${deployUrl}) \`${branch}\`
                 
-[📊 ArgoCD Dashboard](https://argo.dev.theedgestory.org/applications/argocd/core-pipeline-dev?view=tree)`
+### Monitoring & Tools
+[📊 ArgoCD](https://argo.dev.theedgestory.org/) | [📈 Grafana](https://grafana.dev.theedgestory.org/) | [📨 Kafka](https://kafka.dev.theedgestory.org/) | [🔍 Status](https://status.theedgestory.org/)`
               });
             }
             
