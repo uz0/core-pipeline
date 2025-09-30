@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, DynamicModule } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,13 +11,26 @@ import { CallRepository } from '../repositories/call.repository';
 import { RedisService } from './services/redis.service';
 import { CallProcessor } from './processors/call.processor';
 
+// Helper function to conditionally create Bull queue registration
+function createBullQueueRegistration(): DynamicModule | null {
+  const bullRedisUrl = process.env.BULL_REDIS_URL;
+
+  if (!bullRedisUrl) {
+    return null;
+  }
+
+  return BullModule.registerQueue({
+    name: 'call-queue',
+  });
+}
+
+const bullQueue = createBullQueueRegistration();
+
 @Module({
   imports: [
     ConfigModule,
     TypeOrmModule.forFeature([Call]),
-    BullModule.registerQueue({
-      name: 'call-queue',
-    }),
+    ...(bullQueue ? [bullQueue] : []),
     ClientsModule.registerAsync([
       {
         name: 'KAFKA_SERVICE',

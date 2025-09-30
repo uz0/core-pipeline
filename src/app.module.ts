@@ -1,4 +1,4 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule, DynamicModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
@@ -16,6 +16,22 @@ import { KafkaModule } from './kafka/kafka.module';
 import { getDatabaseConfig } from './config/database.config';
 import configuration from './config/configuration';
 
+// Helper function to conditionally create BullModule import
+function createBullModuleImport(): DynamicModule | null {
+  const bullRedisUrl = process.env.BULL_REDIS_URL;
+
+  if (!bullRedisUrl) {
+    console.log('BULL_REDIS_URL not provided. Running without Bull queues.');
+    return null;
+  }
+
+  return BullModule.forRoot({
+    redis: bullRedisUrl,
+  });
+}
+
+const bullModule = createBullModuleImport();
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -23,16 +39,7 @@ import configuration from './config/configuration';
       isGlobal: true,
     }),
     TypeOrmModule.forRoot(getDatabaseConfig()),
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('REDIS_HOST', 'localhost'),
-          port: configService.get('REDIS_PORT', 6379),
-        },
-      }),
-      inject: [ConfigService],
-    }),
+    ...(bullModule ? [bullModule] : []),
     TerminusModule,
     KafkaModule,
   ],
