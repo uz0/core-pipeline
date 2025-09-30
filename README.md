@@ -353,37 +353,36 @@ The application provides dedicated endpoints for Kubernetes probes:
 
 ## CI/CD Pipeline
 
-The GitHub Actions workflow (`.github/workflows/ci-cd.yaml`) provides:
+Simple GitHub Actions setup with 3 workflows:
 
-1. **Test & Lint**: Runs on all PRs and pushes
-   - Installs dependencies
-   - Runs linter
-   - Executes tests with coverage
+### 1. CI (`.github/workflows/ci.yml`)
+**Runs on**: Pull requests and pushes to main/develop
+- **Lint & Type Check**: ESLint, Prettier, TypeScript build
+- **Tests**: Unit and E2E tests with PostgreSQL/Redis
 
-2. **Build & Push**: Runs on pushes to main branches
-   - Builds multi-platform Docker images
-   - Pushes to GitHub Container Registry (GHCR)
-   - Tags images appropriately
+### 2. Deploy (`.github/workflows/deploy.yml`)  
+**Auto**: Push to main → Production deployment
+**Manual**: Actions → Deploy → Run workflow → Choose environment
+- Builds and pushes Docker images to GHCR
+- Updates tag files in [core-charts](https://github.com/uz0/core-charts) repository
+- Only modifies `dev.tag.yaml` or `prod.tag.yaml` (not values files)
+- Creates GitHub deployment records
 
-3. **Deploy**: Separate jobs for dev and prod environments
-   - Updates Helm values in core-charts repository
-   - Creates GitHub deployment records
-   - ArgoCD automatically syncs the changes
+### 3. PR Deploy Link (`.github/workflows/pr-deploy.yml`)
+**Runs on**: PR opened/updated
+- Adds minimal deployment comment with link
+- Shows ArgoCD dashboard link
 
 ### Required GitHub Secrets
 
-The pipeline uses GitHub's built-in `GITHUB_TOKEN` for:
-- GHCR (GitHub Container Registry) authentication
-- Updating the core-charts repository
+- `CORE_CHARTS_PAT`: Personal Access Token with repo scope for uz0/core-charts
+- `GITHUB_TOKEN`: Automatically provided (for GHCR)
 
-**Note**: Ensure the `GITHUB_TOKEN` has write permissions to the core-charts repository.
+### Deployment Process
 
-### Optional Secrets
-
-For enhanced deployments, you may want to add:
-- `ARGOCD_TOKEN` - For triggering ArgoCD syncs programmatically
-- `SLACK_WEBHOOK` - For deployment notifications
-- `CHARTS_DEPLOY_KEY` - If using a separate deploy key for core-charts repository
+1. **Production**: Merge to main → Auto deploys
+2. **Development**: Click deploy link in PR comment → Manual deploy
+3. **ArgoCD**: Monitors tag files and syncs changes
 
 ## Observability
 

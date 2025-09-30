@@ -1,3 +1,5 @@
+import { MetricsService } from '../src/services/metrics.service';
+
 // Increase test timeout for integration tests
 jest.setTimeout(10000);
 
@@ -20,3 +22,9 @@ process.env.DATABASE_NAME = 'test';
 process.env.REDIS_HOST = 'localhost';
 process.env.REDIS_PORT = '6379';
 process.env.KAFKA_BROKERS = 'localhost:9092';
+process.env.METRICS_ENABLED = 'false';
+
+// Reset metrics before each test suite
+beforeEach(() => {
+  MetricsService.resetForTesting();
+});
