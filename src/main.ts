@@ -8,6 +8,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 async function bootstrap() {
+  // Catch unhandled rejections to prevent Bull from crashing the app
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Don't exit the process - just log the error
+  });
+
   try {
     // Log version information at startup
     console.log('='.repeat(80));

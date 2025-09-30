@@ -75,8 +75,25 @@ function createBullModuleImport(): DynamicModule | null {
     console.log(`[BullModule]   Config keys: ${Object.keys(redisConfig).join(', ')}`);
 
     console.log('[BullModule] Creating BullModule.forRoot()...');
+
+    // Add error handling to prevent Bull from crashing the app
+    redisConfig.maxRetriesPerRequest = 1;
+    redisConfig.enableReadyCheck = false;
+    redisConfig.retryStrategy = (times: number) => {
+      console.warn(`[BullModule] Redis connection attempt ${times} failed`);
+      if (times > 3) {
+        console.error('[BullModule] Redis unavailable, Bull will run in degraded mode');
+        return null; // Stop retrying
+      }
+      return Math.min(times * 100, 2000);
+    };
+
     return BullModule.forRoot({
       redis: redisConfig,
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
     });
   } catch (error) {
     console.error('[BullModule] ✗ Failed to parse BULL_REDIS_URL:', error.message);
