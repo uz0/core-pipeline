@@ -178,6 +178,7 @@ export class RedisService {
 
       // Try to connect
       this.logger.log('=== Attempting to connect Redis main client ===');
+      this.logger.log(`About to call connect() with password first char: ${redisConfig.password ? redisConfig.password.charCodeAt(0) : 'N/A'}`);
       try {
         await this.redisClient.connect();
         this.logger.log('✓ Redis main client connect() completed successfully');
