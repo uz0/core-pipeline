@@ -13,6 +13,12 @@ export class LoggingMiddleware implements NestMiddleware {
     res.on('finish', () => {
       const duration = Date.now() - startTime;
       const { statusCode } = res;
+      const userAgent = req.get('user-agent');
+
+      // Skip logging Kubernetes health check probes to reduce noise
+      if (userAgent?.includes('kube-probe') && originalUrl.includes('/health')) {
+        return;
+      }
 
       this.logger.log({
         message: `HTTP ${method} ${originalUrl}`,
@@ -21,7 +27,7 @@ export class LoggingMiddleware implements NestMiddleware {
         statusCode,
         duration,
         ip,
-        userAgent: req.get('user-agent'),
+        userAgent,
       });
     });
 
