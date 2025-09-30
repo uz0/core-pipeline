@@ -69,7 +69,7 @@ jobs:
     needs: build-and-push
     environment:
       name: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'production' || 'development' }}
-      url: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'https://core-pipeline.theedgestory.org' || 'https://dev.core-pipeline.theedgestory.org' }}
+      url: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'https://core-pipeline.theedgestory.org' || 'https://core-pipeline.dev.theedgestory.org' }}
     permissions:
       contents: read
       deployments: write
@@ -82,7 +82,7 @@ jobs:
           script: |
             const isProd = context.eventName === 'push' && context.ref === 'refs/heads/main';
             const environment = isProd ? 'production' : 'development';
-            const url = isProd ? 'https://core-pipeline.theedgestory.org' : 'https://dev.core-pipeline.theedgestory.org';
+            const url = isProd ? 'https://core-pipeline.theedgestory.org' : 'https://core-pipeline.dev.theedgestory.org';
             
             const deployment = await github.rest.repos.createDeployment({
               owner: context.repo.owner,
