@@ -121,13 +121,13 @@ jobs:
           ENVIRONMENT=${{ steps.deployment.outputs.environment == 'production' && 'prod' || 'dev' }}
           IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
           TAG_FILE="charts/core-pipeline/${ENVIRONMENT}.tag.yaml"
-          
+
           # Create or update the tag file with image info
           cat > ${TAG_FILE} << EOF
-image:
-  tag: "${IMAGE_TAG}"
-  repository: "ghcr.io/uz0/core-pipeline"
-EOF
+          image:
+            tag: "${IMAGE_TAG}"
+            repository: "ghcr.io/uz0/core-pipeline"
+          EOF
           
           # Show what we're updating
           echo "Updating ${TAG_FILE} with tag: ${IMAGE_TAG}"

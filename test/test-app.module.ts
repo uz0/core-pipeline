@@ -18,7 +18,7 @@ import { RedisService } from '../src/kafka/services/redis.service';
 
 // Mock implementations for testing
 export class MockKafkaProducerService {
-  async produce(topic: string, message: any, key?: string, headers?: any) {
+  async produce(topic: string) {
     return {
       success: true,
       messageId: 'test-message-id',
@@ -44,7 +44,7 @@ export class MockKafkaConsumerService {
     return ['test-topic'];
   }
 
-  async subscribeToTopic(topic: string) {
+  async subscribeToTopic() {
     return true;
   }
 }
@@ -85,7 +85,7 @@ export class MockRedisService {
     return true;
   }
 
-  async store(key: string, value: any, ttl?: number): Promise<void> {
+  async store(key: string, value: any): Promise<void> {
     this.cache.set(key, value);
   }
 
@@ -101,11 +101,11 @@ export class MockRedisService {
     return this.cache.has(key);
   }
 
-  async publish(channel: string, message: any): Promise<void> {
+  async publish(): Promise<void> {
     // Mock publish
   }
 
-  async subscribe(channel: string, callback: (message: any) => void): Promise<void> {
+  async subscribe(): Promise<void> {
     // Mock subscribe
   }
 

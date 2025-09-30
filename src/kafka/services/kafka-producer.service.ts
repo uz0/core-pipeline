@@ -20,12 +20,12 @@ export class KafkaProducerService implements OnModuleInit {
       this.isConnected = true;
       return;
     }
-    
+
     try {
       await Promise.race([
         this.kafkaClient.connect(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Kafka connection timeout')), 5000)
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Kafka connection timeout')), 5000),
         ),
       ]);
       this.isConnected = true;

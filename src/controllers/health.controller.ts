@@ -26,7 +26,7 @@ export class HealthController {
     const isTest = process.env.NODE_ENV === 'test';
     const heapThreshold = isTest ? 500 * 1024 * 1024 : 150 * 1024 * 1024; // 500MB for tests, 150MB for prod
     const rssThreshold = isTest ? 1024 * 1024 * 1024 : 300 * 1024 * 1024; // 1GB for tests, 300MB for prod
-    
+
     return this.health.check([
       () => this.memory.checkHeap('memory_heap', heapThreshold),
       () => this.memory.checkRSS('memory_rss', rssThreshold),

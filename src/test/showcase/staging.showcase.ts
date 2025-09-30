@@ -28,7 +28,10 @@ export class StagingShowcase {
       if (!this.metricsCollector.has(name)) {
         this.metricsCollector.set(name, []);
       }
-      this.metricsCollector.get(name)!.push(duration);
+      const metrics = this.metricsCollector.get(name);
+      if (metrics) {
+        metrics.push(duration);
+      }
 
       return result;
     } catch (error) {
@@ -143,7 +146,6 @@ export class StagingShowcase {
       return await this.apiClient.get('/api/kafka/calls');
     });
 
-    const createdIds = new Set(testCalls.map((c) => c.id));
     const dbIds = new Set(dbCalls.data.calls.map((c: any) => c.id));
     const foundCount = testCalls.filter((c) => dbIds.has(c.id)).length;
 

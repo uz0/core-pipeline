@@ -141,7 +141,7 @@ describe('KafkaProducerService', () => {
 
       let callCount = 0;
       // Mock emit to succeed first, then fail
-      jest.spyOn(service, 'produce').mockImplementation(async (topic, value, key) => {
+      jest.spyOn(service, 'produce').mockImplementation(async (topic) => {
         callCount++;
         if (callCount === 1) {
           // First message succeeds
