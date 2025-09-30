@@ -33,15 +33,15 @@ class CreateCallDto {
   @IsOptional()
   @IsString()
   callerId?: string;
-  
+
   @IsOptional()
   @IsString()
   recipientId?: string;
-  
+
   @IsOptional()
   @IsString()
   status?: string;
-  
+
   @IsOptional()
   metadata?: Record<string, any>;
 }
@@ -49,9 +49,9 @@ class CreateCallDto {
 class StoreDataDto {
   @IsString()
   key: string;
-  
+
   value: any;
-  
+
   @IsOptional()
   ttl?: number;
 }
@@ -59,7 +59,7 @@ class StoreDataDto {
 class PublishMessageDto {
   @IsString()
   channel: string;
-  
+
   message: any;
 }
 
@@ -595,7 +595,7 @@ export class ShowcaseController {
         subscribedTopics: [dto.topic],
       };
     }
-    
+
     // In real environment, actually subscribe
     await this.kafkaConsumer.subscribeToTopic(dto.topic);
     return {

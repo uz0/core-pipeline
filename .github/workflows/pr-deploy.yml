@@ -62,8 +62,10 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: pr.number,
-                body: `## 🚀 [Deploy this branch to development](${deployUrl}) \`${branch}\`
-                
+                body: `## 🚀 Deploy this branch to development: \`${branch}\`
+
+[Click here to deploy](${deployUrl})
+
 ### Monitoring & Tools
 [📊 ArgoCD](https://argo.dev.theedgestory.org/) | [📈 Grafana](https://grafana.dev.theedgestory.org/) | [📨 Kafka](https://kafka.dev.theedgestory.org/) | [🔍 Status](https://status.theedgestory.org/)`
               });

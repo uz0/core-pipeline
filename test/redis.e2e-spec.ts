@@ -358,7 +358,7 @@ describe('RedisController (e2e)', () => {
 
       const responses = await Promise.all(promises);
 
-      responses.forEach((response, index) => {
+      responses.forEach((response) => {
         expect(response.status).toBe(201);
         expect(response.body.success).toBe(true);
       });

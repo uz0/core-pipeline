@@ -226,11 +226,7 @@ describe('ShowcaseController (e2e)', () => {
   describe('Showcase data validation', () => {
     it('should ensure data consistency across showcases', async () => {
       // Run basic flow first
-      const basicFlow = await request(app.getHttpServer())
-        .get('/api/showcase/basic-flow')
-        .expect(200);
-
-      const callId = basicFlow.body.results.createCall.call.id;
+      await request(app.getHttpServer()).get('/api/showcase/basic-flow').expect(200);
 
       // Verify call exists in database through stats
       const stats = await request(app.getHttpServer()).get('/api/calls/stats').expect(200);

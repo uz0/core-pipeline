@@ -3,8 +3,6 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { TestAppModule } from './test-app.module';
 import { CallRepository } from '../src/repositories/call.repository';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Call } from '../src/entities/call.entity';
 
 describe('CallController (e2e)', () => {
   let app: INestApplication;
@@ -48,13 +46,13 @@ describe('CallController (e2e)', () => {
 
     it('should return all calls', async () => {
       // Create test calls
-      const call1 = await callRepository.createCall({
+      await callRepository.createCall({
         callerId: 'user-1',
         recipientId: 'user-2',
         status: 'initiated',
       });
 
-      const call2 = await callRepository.createCall({
+      await callRepository.createCall({
         callerId: 'user-3',
         recipientId: 'user-4',
         status: 'completed',

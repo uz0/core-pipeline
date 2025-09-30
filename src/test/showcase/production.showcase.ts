@@ -340,7 +340,7 @@ export class ProductionShowcase extends EventEmitter {
     // Simulate Redis unavailability
     try {
       // Even if Redis is down, API should still work
-      const call = await this.apiClient.post('/api/kafka/calls', {
+      await this.apiClient.post('/api/kafka/calls', {
         callerId: 'degraded-test',
         recipientId: 'degraded-recipient',
         status: 'test',
@@ -356,7 +356,7 @@ export class ProductionShowcase extends EventEmitter {
 
     const rapidRequests = Array(10)
       .fill(null)
-      .map(async (_, i) => {
+      .map(async () => {
         try {
           await this.apiClient.get('/api/kafka/calls', {
             timeout: 100, // Very short timeout to trigger failures
@@ -639,8 +639,7 @@ export class ProductionShowcase extends EventEmitter {
 
     // 5. Security headers
     try {
-      const response = await this.apiClient.get('/health');
-      const headers = response.headers;
+      await this.apiClient.get('/health');
       // Check for security headers
       checklist.security = true; // Basic security assumed
       console.log('  ✅ Security measures in place');
@@ -802,7 +801,7 @@ if (require.main === module) {
     console.log(`\n🚨 Real-time Alert: ${alert.type}`);
   });
 
-  showcase.on('metric', (metric) => {
+  showcase.on('metric', () => {
     // Could send to monitoring service
   });
 

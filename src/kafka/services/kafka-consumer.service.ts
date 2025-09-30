@@ -58,8 +58,8 @@ export class KafkaConsumerService implements OnModuleInit {
     try {
       await Promise.race([
         this.consumer.connect(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Kafka connection timeout')), 5000)
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Kafka connection timeout')), 5000),
         ),
       ]);
       this.logger.log('Kafka consumer connected');

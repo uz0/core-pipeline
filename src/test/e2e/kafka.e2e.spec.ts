@@ -28,7 +28,7 @@ describe('Kafka Controller E2E Tests', () => {
 
   afterAll(async () => {
     // Wait a bit for any pending requests to complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await app.close();
   });
 
@@ -303,7 +303,7 @@ describe('Kafka Controller E2E Tests', () => {
 
   describe('GET /api/showcase/kafka/messages/:id', () => {
     it('should return 404 for non-existent message', async () => {
-      const response = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .get('/api/showcase/kafka/messages/non-existent-id')
         .expect(404);
     });

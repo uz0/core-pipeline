@@ -5,7 +5,6 @@ import { Call } from '../../entities/call.entity';
 
 describe('CallRepository', () => {
   let repository: CallRepository;
-  let dataSource: DataSource;
 
   const mockDataSource = {
     createEntityManager: jest.fn(),
@@ -34,7 +33,6 @@ describe('CallRepository', () => {
     }).compile();
 
     repository = module.get<CallRepository>(CallRepository);
-    dataSource = module.get<DataSource>(DataSource);
   });
 
   afterEach(() => {
