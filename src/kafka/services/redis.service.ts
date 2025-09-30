@@ -23,9 +23,15 @@ export class RedisService {
 
   private async initializeRedis() {
     try {
+      const redisUrl = this.configService.get('REDIS_URL');
+
+      // If no REDIS_URL is provided, disable Redis
+      if (!redisUrl) {
+        this.logger.log('REDIS_URL not provided. Running without Redis.');
+        return;
+      }
+
       const redisConfig = {
-        host: this.configService.get('REDIS_HOST', 'localhost'),
-        port: this.configService.get('REDIS_PORT', 6379),
         retryStrategy: (times: number) => {
           if (times > 3) {
             this.logger.warn('Redis connection failed after 3 attempts. Running without Redis.');
@@ -37,8 +43,8 @@ export class RedisService {
         lazyConnect: true,
       };
 
-      this.redisClient = new Redis(redisConfig);
-      this.redisPubClient = new Redis(redisConfig);
+      this.redisClient = new Redis(redisUrl, redisConfig);
+      this.redisPubClient = new Redis(redisUrl, redisConfig);
 
       // Set up error handlers to prevent crashes
       this.redisClient.on('error', (err) => {
@@ -110,10 +116,10 @@ export class RedisService {
   async subscribe(channel: string, callback: (message: any) => void): Promise<void> {
     if (process.env.NODE_ENV === 'test') return;
 
-    const subClient = new Redis({
-      host: this.configService.get('REDIS_HOST', 'localhost'),
-      port: this.configService.get('REDIS_PORT', 6379),
-    });
+    const redisUrl = this.configService.get('REDIS_URL');
+    if (!redisUrl) return;
+
+    const subClient = new Redis(redisUrl);
 
     await subClient.subscribe(channel);
     subClient.on('message', (receivedChannel, message) => {
