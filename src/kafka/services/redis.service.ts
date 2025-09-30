@@ -69,7 +69,8 @@ export class RedisService {
         const url = new URL(redisUrl);
 
         this.logger.log(`URL parsed - protocol: ${url.protocol}, hostname: ${url.hostname}, port: ${url.port}`);
-        this.logger.log(`URL username: ${url.username || '(empty)'}, password length: ${url.password ? url.password.length : 0}`);
+        this.logger.log(`URL username raw: "${url.username}", length: ${url.username.length}, is empty string: ${url.username === ''}`);
+        this.logger.log(`URL password length: ${url.password ? url.password.length : 0}`);
 
         redisConfig.host = url.hostname;
         redisConfig.port = parseInt(url.port) || 6379;
@@ -82,12 +83,15 @@ export class RedisService {
         }
 
         // IMPORTANT: Only set username if explicitly provided and not empty
+        this.logger.log(`Checking username: value="${url.username}", isEmpty=${url.username === ''}, isDefault=${url.username === 'default'}`);
         if (url.username && url.username !== '' && url.username !== 'default') {
           redisConfig.username = url.username;
-          this.logger.log(`Redis username configured: ${url.username}`);
+          this.logger.log(`✓ Redis username configured: ${url.username}`);
         } else {
-          this.logger.log(`No username in URL - omitting username field (password-only auth)`);
+          this.logger.log(`✓ No username in URL - omitting username field (password-only auth)`);
           // Do NOT set username at all - let Redis use password-only authentication
+          // Make ABSOLUTELY sure username is not set
+          delete redisConfig.username;
         }
 
         this.logger.log(`=== Final Redis Config ===`);
@@ -105,6 +109,27 @@ export class RedisService {
       }
 
       this.logger.log('Creating Redis client instances...');
+
+      // Deep debug: Log the EXACT config being passed to Redis
+      this.logger.log('=== DEEP DEBUG: Redis Config Object ===');
+      this.logger.log(`Config type: ${typeof redisConfig}`);
+      this.logger.log(`Config is string: ${typeof redisConfig === 'string'}`);
+      if (typeof redisConfig === 'object') {
+        this.logger.log(`Config keys: ${Object.keys(redisConfig).join(', ')}`);
+        this.logger.log(`Config.host: ${redisConfig.host}`);
+        this.logger.log(`Config.port: ${redisConfig.port}`);
+        this.logger.log(`Config.password exists: ${!!redisConfig.password}`);
+        this.logger.log(`Config.password type: ${typeof redisConfig.password}`);
+        this.logger.log(`Config.password length: ${redisConfig.password ? redisConfig.password.length : 0}`);
+        this.logger.log(`Config.password first char: ${redisConfig.password ? redisConfig.password.charCodeAt(0) : 'N/A'}`);
+        this.logger.log(`Config.password last char: ${redisConfig.password ? redisConfig.password.charCodeAt(redisConfig.password.length - 1) : 'N/A'}`);
+        this.logger.log(`Config.username: ${redisConfig.username || '(not set)'}`);
+        this.logger.log(`Config has username property: ${'username' in redisConfig}`);
+        this.logger.log(`Full config (stringified): ${JSON.stringify(redisConfig, (key, value) => key === 'password' ? '***' : value)}`);
+      } else {
+        this.logger.log(`Config value (string): ${redisConfig}`);
+      }
+
       this.redisClient = new Redis(redisConfig);
       this.redisPubClient = new Redis(redisConfig);
       this.logger.log('Redis client instances created');

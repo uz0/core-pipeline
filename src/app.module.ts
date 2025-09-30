@@ -55,19 +55,24 @@ function createBullModuleImport(): DynamicModule | null {
 
     // Add username if present in URL (Redis 6+)
     // IMPORTANT: Only set username if explicitly provided and not empty
+    console.log(`[BullModule] Checking username: value="${url.username}", isEmpty=${url.username === ''}, isDefault=${url.username === 'default'}`);
     if (url.username && url.username !== '' && url.username !== 'default') {
       redisConfig.username = url.username;
       console.log(`[BullModule] ✓ Redis username configured: ${url.username}`);
     } else {
-      console.log(`[BullModule] No username in URL - omitting username field (password-only auth)`);
+      console.log(`[BullModule] ✓ No username in URL - omitting username field (password-only auth)`);
       // Do NOT set username at all - let Redis use password-only authentication
+      // Make ABSOLUTELY sure username is not set
+      delete redisConfig.username;
     }
 
     console.log(`[BullModule] === Final Config ===`);
     console.log(`[BullModule]   host: ${redisConfig.host}`);
     console.log(`[BullModule]   port: ${redisConfig.port}`);
-    console.log(`[BullModule]   username: ${redisConfig.username || '(default)'}`);
+    console.log(`[BullModule]   username: ${redisConfig.username || '(not set)'}`);
     console.log(`[BullModule]   hasPassword: ${!!redisConfig.password}`);
+    console.log(`[BullModule]   username property exists: ${'username' in redisConfig}`);
+    console.log(`[BullModule]   Config keys: ${Object.keys(redisConfig).join(', ')}`);
 
     console.log('[BullModule] Creating BullModule.forRoot()...');
     return BullModule.forRoot({
