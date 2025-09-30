@@ -26,7 +26,6 @@ describe('RedisService', () => {
   let mockQueue: any;
   let mockRedisClient: any;
   let mockRedisPubClient: any;
-  let configService: ConfigService;
 
   beforeEach(async () => {
     mockRedisClient = {
@@ -64,7 +63,6 @@ describe('RedisService', () => {
     }).compile();
 
     service = module.get<RedisService>(RedisService);
-    configService = module.get<ConfigService>(ConfigService);
 
     // Override the mock clients
     (service as any).redisClient = mockRedisClient;
