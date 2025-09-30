@@ -16,7 +16,12 @@ export class LoggingMiddleware implements NestMiddleware {
       const userAgent = req.get('user-agent');
 
       // Skip logging Kubernetes health check probes to reduce noise
-      if (userAgent?.includes('kube-probe') && originalUrl.includes('/health')) {
+      if (userAgent?.includes('kube-probe')) {
+        return;
+      }
+
+      // Also skip health check endpoints regardless of user agent
+      if (originalUrl.includes('/health')) {
         return;
       }
 
