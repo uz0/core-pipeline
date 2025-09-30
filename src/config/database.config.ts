@@ -30,7 +30,8 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
   }
 
   // Determine database name based on environment
-  const dbName = process.env.DB_DATABASE || 
+  const dbName =
+    process.env.DB_DATABASE ||
     (process.env.NODE_ENV === 'production' ? 'core_pipeline' : 'core_pipeline_dev');
 
   return {

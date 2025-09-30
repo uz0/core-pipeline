@@ -18,17 +18,19 @@ export class Call {
   duration: number;
 
   @Column({
-    type: process.env.NODE_ENV === 'test' || process.env.MINIMAL_DEV === 'true' 
-      ? 'simple-json' 
-      : 'jsonb',
+    type:
+      process.env.NODE_ENV === 'test' || process.env.MINIMAL_DEV === 'true'
+        ? 'simple-json'
+        : 'jsonb',
     nullable: true,
   })
   metadata: Record<string, any>;
 
   @CreateDateColumn({
-    type: process.env.NODE_ENV === 'test' || process.env.MINIMAL_DEV === 'true'
-      ? 'datetime' 
-      : 'timestamp with time zone',
+    type:
+      process.env.NODE_ENV === 'test' || process.env.MINIMAL_DEV === 'true'
+        ? 'datetime'
+        : 'timestamp with time zone',
   })
   createdAt: Date;
 }

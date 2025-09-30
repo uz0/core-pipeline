@@ -9,7 +9,8 @@ export class LoggerService implements NestLoggerService {
 
   constructor(private configService?: ConfigService) {
     const level = this.configService?.get('logging.level') || 'info';
-    const isDevelopment = (this.configService?.get('node_env') || process.env.NODE_ENV) === 'development';
+    const isDevelopment =
+      (this.configService?.get('node_env') || process.env.NODE_ENV) === 'development';
     const prettyPrint = this.configService?.get('logging.prettyPrint') ?? isDevelopment;
 
     this.logger = pino({
