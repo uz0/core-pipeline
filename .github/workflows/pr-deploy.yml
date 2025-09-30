@@ -2,7 +2,7 @@ name: PR Deploy Link
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened]
   workflow_dispatch:
 
 jobs:
