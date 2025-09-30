@@ -15,99 +15,175 @@ export class RedisService {
     @Optional() @InjectQueue('call-queue') private callQueue: Queue,
     private configService: ConfigService,
   ) {
+    this.logger.log('=== RedisService Constructor Called ===');
+    this.logger.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+    this.logger.log(`REDIS_URL exists: ${!!process.env.REDIS_URL}`);
+    this.logger.log(`BULL_REDIS_URL exists: ${!!process.env.BULL_REDIS_URL}`);
+    this.logger.log(`callQueue injected: ${!!callQueue}`);
+
     // Skip Redis initialization in test environment
     if (process.env.NODE_ENV !== 'test') {
+      this.logger.log('Initializing Redis (not in test mode)');
       this.initializeRedis();
+    } else {
+      this.logger.log('Skipping Redis initialization (test mode)');
     }
   }
 
   private async initializeRedis() {
+    this.logger.log('=== Starting Redis Initialization ===');
     try {
       const redisUrl = this.configService.get('REDIS_URL');
+      this.logger.log(`ConfigService.get('REDIS_URL') returned: ${!!redisUrl ? 'value exists' : 'null/undefined'}`);
 
       // If no REDIS_URL is provided, disable Redis
       if (!redisUrl) {
-        this.logger.log('REDIS_URL not provided. Running without Redis.');
+        this.logger.warn('REDIS_URL not provided. Running without Redis.');
+        this.logger.log('Available env vars:', Object.keys(process.env).filter(k => k.includes('REDIS')));
         return;
       }
 
-      this.logger.log(`Initializing Redis connection to: ${redisUrl.replace(/:[^:@]+@/, ':***@')}`);
+      const sanitizedUrl = redisUrl.replace(/:[^:@]+@/, ':***@');
+      this.logger.log(`Initializing Redis connection to: ${sanitizedUrl}`);
+      this.logger.log(`Full URL structure check - starts with redis://${redisUrl.startsWith('redis://')}, length: ${redisUrl.length}`);
 
       // Parse Redis URL to properly extract credentials
       let redisConfig: any = {
         retryStrategy: (times: number) => {
+          this.logger.warn(`Redis retry attempt ${times}/3`);
           if (times > 3) {
-            this.logger.warn('Redis connection failed after 3 attempts. Running without Redis.');
+            this.logger.error('Redis connection failed after 3 attempts. Running without Redis.');
             return null; // Stop retrying
           }
-          return Math.min(times * 100, 2000);
+          const delay = Math.min(times * 100, 2000);
+          this.logger.log(`Retrying Redis connection in ${delay}ms`);
+          return delay;
         },
         enableOfflineQueue: false,
         lazyConnect: true,
+        showFriendlyErrorStack: true,
       };
 
       try {
+        this.logger.log('Attempting to parse Redis URL...');
         const url = new URL(redisUrl);
+
+        this.logger.log(`URL parsed - protocol: ${url.protocol}, hostname: ${url.hostname}, port: ${url.port}`);
+        this.logger.log(`URL username: ${url.username || '(empty)'}, password length: ${url.password ? url.password.length : 0}`);
+
         redisConfig.host = url.hostname;
         redisConfig.port = parseInt(url.port) || 6379;
 
         if (url.password) {
           redisConfig.password = url.password;
-          this.logger.log(`Redis password found in URL`);
+          this.logger.log(`Redis password configured (length: ${url.password.length} chars)`);
+        } else {
+          this.logger.warn('No password found in Redis URL');
         }
 
         if (url.username && url.username !== 'default') {
           redisConfig.username = url.username;
-          this.logger.log(`Redis username found in URL: ${url.username}`);
+          this.logger.log(`Redis username configured: ${url.username}`);
+        } else {
+          this.logger.log(`Redis username: ${url.username || '(none)'} - using default`);
         }
 
-        this.logger.log(`Redis config: host=${redisConfig.host}, port=${redisConfig.port}, hasPassword=${!!redisConfig.password}, username=${redisConfig.username || 'default'}`);
+        this.logger.log(`=== Final Redis Config ===`);
+        this.logger.log(`  host: ${redisConfig.host}`);
+        this.logger.log(`  port: ${redisConfig.port}`);
+        this.logger.log(`  username: ${redisConfig.username || '(default)'}`);
+        this.logger.log(`  hasPassword: ${!!redisConfig.password}`);
+        this.logger.log(`  lazyConnect: ${redisConfig.lazyConnect}`);
+        this.logger.log(`  enableOfflineQueue: ${redisConfig.enableOfflineQueue}`);
       } catch (parseError) {
-        this.logger.warn(`Failed to parse REDIS_URL as URL, using string directly: ${parseError.message}`);
+        this.logger.error(`Failed to parse REDIS_URL as URL: ${parseError.message}`, parseError.stack);
+        this.logger.warn('Fallback: using URL string directly');
         // Fallback to using the URL string directly
         redisConfig = redisUrl;
       }
 
+      this.logger.log('Creating Redis client instances...');
       this.redisClient = new Redis(redisConfig);
       this.redisPubClient = new Redis(redisConfig);
+      this.logger.log('Redis client instances created');
 
       // Set up error handlers to prevent crashes
+      this.logger.log('Setting up Redis event handlers...');
+
       this.redisClient.on('error', (err) => {
-        this.logger.warn(`Redis client error: ${err.message}`);
+        this.logger.error(`Redis client ERROR event: ${err.message}`, err.stack);
         this.isConnected = false;
       });
 
       this.redisClient.on('connect', () => {
-        this.logger.log('Redis client connected successfully');
+        this.logger.log('✓ Redis client CONNECT event - TCP connection established');
         this.isConnected = true;
       });
 
       this.redisClient.on('ready', () => {
-        this.logger.log('Redis client ready for commands');
+        this.logger.log('✓ Redis client READY event - authenticated and ready for commands');
+      });
+
+      this.redisClient.on('close', () => {
+        this.logger.warn('Redis client CLOSE event - connection closed');
+        this.isConnected = false;
+      });
+
+      this.redisClient.on('reconnecting', () => {
+        this.logger.log('Redis client RECONNECTING event');
+      });
+
+      this.redisClient.on('end', () => {
+        this.logger.warn('Redis client END event - connection ended');
       });
 
       this.redisPubClient.on('error', (err) => {
-        this.logger.warn(`Redis pub client error: ${err.message}`);
+        this.logger.error(`Redis pub client ERROR event: ${err.message}`, err.stack);
+      });
+
+      this.redisPubClient.on('connect', () => {
+        this.logger.log('✓ Redis pub client CONNECT event');
+      });
+
+      this.redisPubClient.on('ready', () => {
+        this.logger.log('✓ Redis pub client READY event');
       });
 
       // Try to connect
-      this.logger.log('Attempting to connect Redis client...');
-      await this.redisClient.connect().catch((err) => {
-        this.logger.error(`Failed to connect to Redis: ${err.message}`, err.stack);
+      this.logger.log('=== Attempting to connect Redis main client ===');
+      try {
+        await this.redisClient.connect();
+        this.logger.log('✓ Redis main client connect() completed successfully');
+
+        // Test the connection with a PING
+        this.logger.log('Testing connection with PING...');
+        const pingResult = await this.redisClient.ping();
+        this.logger.log(`✓ PING response: ${pingResult}`);
+      } catch (err) {
+        this.logger.error(`✗ Failed to connect Redis main client: ${err.message}`, err.stack);
+        this.logger.error(`Error name: ${err.name}, code: ${err.code || 'N/A'}`);
         this.redisClient = null;
-      });
+      }
 
       if (this.redisClient) {
-        this.logger.log('Redis client connected, now connecting pub client...');
-        await this.redisPubClient.connect().catch((err) => {
-          this.logger.error(`Failed to connect Redis pub client: ${err.message}`, err.stack);
+        this.logger.log('=== Attempting to connect Redis pub client ===');
+        try {
+          await this.redisPubClient.connect();
+          this.logger.log('✓ Redis pub client connect() completed successfully');
+        } catch (err) {
+          this.logger.error(`✗ Failed to connect Redis pub client: ${err.message}`, err.stack);
+          this.logger.error(`Error name: ${err.name}, code: ${err.code || 'N/A'}`);
           this.redisPubClient = null;
-        });
+        }
       } else {
-        this.logger.warn('Redis client is null, skipping pub client connection');
+        this.logger.warn('Redis main client is null, skipping pub client connection');
       }
+
+      this.logger.log('=== Redis Initialization Complete ===');
+      this.logger.log(`Main client: ${this.redisClient ? 'CONNECTED' : 'FAILED'}`);
+      this.logger.log(`Pub client: ${this.redisPubClient ? 'CONNECTED' : 'FAILED'}`);
     } catch (error) {
-      this.logger.warn(`Redis initialization failed: ${error.message}`);
+      this.logger.error(`Redis initialization exception: ${error.message}`, error.stack);
       this.redisClient = null;
       this.redisPubClient = null;
     }
