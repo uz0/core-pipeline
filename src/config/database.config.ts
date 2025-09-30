@@ -59,7 +59,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => {
     migrations: [__dirname + '/../../migrations/*.{ts,js}'],
     migrationsTableName: 'migrations',
     migrationsRun: process.env.NODE_ENV !== 'production', // Auto-run in dev, manual in prod
-    retryAttempts: 3,
-    retryDelay: 3000,
+    retryAttempts: 0, // Fail fast - don't retry and delay startup
+    retryDelay: 0,
   };
 };
