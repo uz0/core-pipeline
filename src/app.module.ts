@@ -54,11 +54,13 @@ function createBullModuleImport(): DynamicModule | null {
     }
 
     // Add username if present in URL (Redis 6+)
-    if (url.username && url.username !== 'default') {
+    // IMPORTANT: Only set username if explicitly provided and not empty
+    if (url.username && url.username !== '' && url.username !== 'default') {
       redisConfig.username = url.username;
       console.log(`[BullModule] ✓ Redis username configured: ${url.username}`);
     } else {
-      console.log(`[BullModule] Username: ${url.username || '(none)'} - using default`);
+      console.log(`[BullModule] No username in URL - omitting username field (password-only auth)`);
+      // Do NOT set username at all - let Redis use password-only authentication
     }
 
     console.log(`[BullModule] === Final Config ===`);

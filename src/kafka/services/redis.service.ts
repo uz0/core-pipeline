@@ -81,11 +81,13 @@ export class RedisService {
           this.logger.warn('No password found in Redis URL');
         }
 
-        if (url.username && url.username !== 'default') {
+        // IMPORTANT: Only set username if explicitly provided and not empty
+        if (url.username && url.username !== '' && url.username !== 'default') {
           redisConfig.username = url.username;
           this.logger.log(`Redis username configured: ${url.username}`);
         } else {
-          this.logger.log(`Redis username: ${url.username || '(none)'} - using default`);
+          this.logger.log(`No username in URL - omitting username field (password-only auth)`);
+          // Do NOT set username at all - let Redis use password-only authentication
         }
 
         this.logger.log(`=== Final Redis Config ===`);
@@ -241,7 +243,8 @@ export class RedisService {
         redisConfig.password = url.password;
       }
 
-      if (url.username && url.username !== 'default') {
+      // IMPORTANT: Only set username if explicitly provided and not empty
+      if (url.username && url.username !== '' && url.username !== 'default') {
         redisConfig.username = url.username;
       }
 
