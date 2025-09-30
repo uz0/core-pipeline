@@ -76,13 +76,15 @@ function createBullModuleImport(): DynamicModule | null {
 
     console.log('[BullModule] Creating BullModule.forRoot()...');
 
-    // Add error handling to prevent Bull from crashing the app
+    // Add error handling to prevent Bull from blocking startup or crashing the app
+    redisConfig.lazyConnect = true; // Don't block app startup waiting for Redis
     redisConfig.maxRetriesPerRequest = 1;
     redisConfig.enableReadyCheck = false;
+    redisConfig.enableOfflineQueue = false; // Don't queue commands while disconnected
     redisConfig.retryStrategy = (times: number) => {
       console.warn(`[BullModule] Redis connection attempt ${times} failed`);
       if (times > 3) {
-        console.error('[BullModule] Redis unavailable, Bull will run in degraded mode');
+        console.error('[BullModule] Redis unavailable after 3 attempts, stopping retries');
         return null; // Stop retrying
       }
       return Math.min(times * 100, 2000);
