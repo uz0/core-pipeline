@@ -17,6 +17,7 @@ async function bootstrap() {
   try {
     // Log version information at startup
     console.log('='.repeat(80));
+    console.log('🚨 ATTENTION!!!! APPLICATION STARTUP SEQUENCE BEGINNING 🚨');
     console.log('=== Core Pipeline Application Starting ===');
     console.log('='.repeat(80));
 
@@ -139,9 +140,15 @@ async function bootstrap() {
     }
     await app.listen(port);
 
+    console.log('='.repeat(80));
+    console.log('🚨 ATTENTION!!!! APPLICATION SUCCESSFULLY STARTED 🚨');
+    console.log('='.repeat(80));
     console.log(`Application is running on: http://localhost:${port}`);
     console.log(`Metrics available at: http://localhost:${port}/metrics`);
     console.log(`Health check available at: http://localhost:${port}/health`);
+    console.log(`Liveness check: http://localhost:${port}/health/liveness`);
+    console.log(`Readiness check: http://localhost:${port}/health/readiness`);
+    console.log('='.repeat(80));
   } catch (error) {
     console.error('Failed to start application:', error);
     process.exit(1);
