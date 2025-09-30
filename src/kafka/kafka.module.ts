@@ -13,7 +13,7 @@ import { CallProcessor } from './processors/call.processor';
 
 // Helper function to conditionally create Bull queue registration
 function createBullQueueRegistration(): DynamicModule | null {
-  const bullRedisUrl = process.env.BULL_REDIS_URL;
+  const bullRedisUrl = process.env.BULL_REDIS_URL || process.env.REDIS_URL;
 
   if (!bullRedisUrl) {
     return null;

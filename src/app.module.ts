@@ -18,16 +18,38 @@ import configuration from './config/configuration';
 
 // Helper function to conditionally create BullModule import
 function createBullModuleImport(): DynamicModule | null {
-  const bullRedisUrl = process.env.BULL_REDIS_URL;
+  const bullRedisUrl = process.env.BULL_REDIS_URL || process.env.REDIS_URL;
 
   if (!bullRedisUrl) {
-    console.log('BULL_REDIS_URL not provided. Running without Bull queues.');
+    console.log('BULL_REDIS_URL/REDIS_URL not provided. Running without Bull queues.');
     return null;
   }
 
-  return BullModule.forRoot({
-    redis: bullRedisUrl,
-  });
+  // Parse Redis URL to extract connection details
+  try {
+    const url = new URL(bullRedisUrl);
+    const redisConfig: any = {
+      host: url.hostname,
+      port: parseInt(url.port) || 6379,
+    };
+
+    // Add password if present in URL
+    if (url.password) {
+      redisConfig.password = url.password;
+    }
+
+    // Add username if present in URL (Redis 6+)
+    if (url.username) {
+      redisConfig.username = url.username;
+    }
+
+    return BullModule.forRoot({
+      redis: redisConfig,
+    });
+  } catch (error) {
+    console.error('Failed to parse BULL_REDIS_URL:', error.message);
+    return null;
+  }
 }
 
 const bullModule = createBullModuleImport();
