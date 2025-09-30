@@ -115,18 +115,29 @@ jobs:
           token: ${{ secrets.CORE_CHARTS_PAT }}
           path: core-charts
 
-      - name: Update Helm values
+      - name: Update image tag file
         run: |
           cd core-charts
           ENVIRONMENT=${{ steps.deployment.outputs.environment == 'production' && 'prod' || 'dev' }}
           IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
+          TAG_FILE="charts/core-pipeline/${ENVIRONMENT}.tag.yaml"
           
-          yq eval ".image.tag = \"${IMAGE_TAG}\"" -i charts/core-pipeline/values-${ENVIRONMENT}.yaml
+          # Create or update the tag file with image info
+          cat > ${TAG_FILE} << EOF
+image:
+  tag: "${IMAGE_TAG}"
+  repository: "ghcr.io/uz0/core-pipeline"
+EOF
           
+          # Show what we're updating
+          echo "Updating ${TAG_FILE} with tag: ${IMAGE_TAG}"
+          cat ${TAG_FILE}
+          
+          # Commit and push
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add charts/core-pipeline/values-${ENVIRONMENT}.yaml
-          git commit -m "Deploy to ${ENVIRONMENT}: ${IMAGE_TAG}" || echo "No changes"
+          git add ${TAG_FILE}
+          git commit -m "Deploy to ${ENVIRONMENT}: update tag to ${IMAGE_TAG}" || echo "No changes"
           git push
 
       - name: Update deployment status
