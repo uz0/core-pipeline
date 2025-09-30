@@ -31,7 +31,10 @@ export class RedisService {
         return;
       }
 
-      const redisConfig = {
+      this.logger.log(`Initializing Redis connection to: ${redisUrl.replace(/:[^:@]+@/, ':***@')}`);
+
+      // Parse Redis URL to properly extract credentials
+      let redisConfig: any = {
         retryStrategy: (times: number) => {
           if (times > 3) {
             this.logger.warn('Redis connection failed after 3 attempts. Running without Redis.');
@@ -43,8 +46,30 @@ export class RedisService {
         lazyConnect: true,
       };
 
-      this.redisClient = new Redis(redisUrl, redisConfig);
-      this.redisPubClient = new Redis(redisUrl, redisConfig);
+      try {
+        const url = new URL(redisUrl);
+        redisConfig.host = url.hostname;
+        redisConfig.port = parseInt(url.port) || 6379;
+
+        if (url.password) {
+          redisConfig.password = url.password;
+          this.logger.log(`Redis password found in URL`);
+        }
+
+        if (url.username && url.username !== 'default') {
+          redisConfig.username = url.username;
+          this.logger.log(`Redis username found in URL: ${url.username}`);
+        }
+
+        this.logger.log(`Redis config: host=${redisConfig.host}, port=${redisConfig.port}, hasPassword=${!!redisConfig.password}, username=${redisConfig.username || 'default'}`);
+      } catch (parseError) {
+        this.logger.warn(`Failed to parse REDIS_URL as URL, using string directly: ${parseError.message}`);
+        // Fallback to using the URL string directly
+        redisConfig = redisUrl;
+      }
+
+      this.redisClient = new Redis(redisConfig);
+      this.redisPubClient = new Redis(redisConfig);
 
       // Set up error handlers to prevent crashes
       this.redisClient.on('error', (err) => {
@@ -53,8 +78,12 @@ export class RedisService {
       });
 
       this.redisClient.on('connect', () => {
-        this.logger.log('Redis client connected');
+        this.logger.log('Redis client connected successfully');
         this.isConnected = true;
+      });
+
+      this.redisClient.on('ready', () => {
+        this.logger.log('Redis client ready for commands');
       });
 
       this.redisPubClient.on('error', (err) => {
@@ -62,16 +91,20 @@ export class RedisService {
       });
 
       // Try to connect
+      this.logger.log('Attempting to connect Redis client...');
       await this.redisClient.connect().catch((err) => {
-        this.logger.warn(`Failed to connect to Redis: ${err.message}`);
+        this.logger.error(`Failed to connect to Redis: ${err.message}`, err.stack);
         this.redisClient = null;
       });
 
       if (this.redisClient) {
+        this.logger.log('Redis client connected, now connecting pub client...');
         await this.redisPubClient.connect().catch((err) => {
-          this.logger.warn(`Failed to connect Redis pub client: ${err.message}`);
+          this.logger.error(`Failed to connect Redis pub client: ${err.message}`, err.stack);
           this.redisPubClient = null;
         });
+      } else {
+        this.logger.warn('Redis client is null, skipping pub client connection');
       }
     } catch (error) {
       this.logger.warn(`Redis initialization failed: ${error.message}`);
@@ -119,7 +152,30 @@ export class RedisService {
     const redisUrl = this.configService.get('REDIS_URL');
     if (!redisUrl) return;
 
-    const subClient = new Redis(redisUrl);
+    // Parse Redis URL to use same config as main clients
+    let redisConfig: any;
+    try {
+      const url = new URL(redisUrl);
+      redisConfig = {
+        host: url.hostname,
+        port: parseInt(url.port) || 6379,
+      };
+
+      if (url.password) {
+        redisConfig.password = url.password;
+      }
+
+      if (url.username && url.username !== 'default') {
+        redisConfig.username = url.username;
+      }
+
+      this.logger.log(`Creating subscribe client for channel: ${channel}`);
+    } catch (parseError) {
+      this.logger.warn(`Failed to parse REDIS_URL for subscribe: ${parseError.message}`);
+      redisConfig = redisUrl;
+    }
+
+    const subClient = new Redis(redisConfig);
 
     await subClient.subscribe(channel);
     subClient.on('message', (receivedChannel, message) => {

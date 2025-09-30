@@ -36,18 +36,22 @@ function createBullModuleImport(): DynamicModule | null {
     // Add password if present in URL
     if (url.password) {
       redisConfig.password = url.password;
+      console.log('[BullModule] Redis password configured from URL');
     }
 
     // Add username if present in URL (Redis 6+)
-    if (url.username) {
+    if (url.username && url.username !== 'default') {
       redisConfig.username = url.username;
+      console.log(`[BullModule] Redis username configured: ${url.username}`);
     }
+
+    console.log(`[BullModule] Initializing with Redis: host=${redisConfig.host}, port=${redisConfig.port}, hasPassword=${!!redisConfig.password}, username=${redisConfig.username || 'default'}`);
 
     return BullModule.forRoot({
       redis: redisConfig,
     });
   } catch (error) {
-    console.error('Failed to parse BULL_REDIS_URL:', error.message);
+    console.error('[BullModule] Failed to parse BULL_REDIS_URL:', error.message);
     return null;
   }
 }

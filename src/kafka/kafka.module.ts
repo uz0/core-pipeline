@@ -16,9 +16,11 @@ function createBullQueueRegistration(): DynamicModule | null {
   const bullRedisUrl = process.env.BULL_REDIS_URL || process.env.REDIS_URL;
 
   if (!bullRedisUrl) {
+    console.log('[KafkaModule] No REDIS_URL found, skipping Bull queue registration');
     return null;
   }
 
+  console.log('[KafkaModule] Registering call-queue with Bull');
   return BullModule.registerQueue({
     name: 'call-queue',
   });
