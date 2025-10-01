@@ -25,56 +25,95 @@ export class RedisService {
     try {
       const redisUrl = this.configService.get('REDIS_URL');
 
-      // If no REDIS_URL is provided, disable Redis
       if (!redisUrl) {
-        this.logger.log('REDIS_URL not provided. Running without Redis.');
+        this.logger.warn('REDIS_URL not provided. Running without Redis.');
         return;
       }
 
-      const redisConfig = {
+      // Parse Redis URL to properly extract credentials
+      let redisConfig: any = {
         retryStrategy: (times: number) => {
-          if (times > 3) {
-            this.logger.warn('Redis connection failed after 3 attempts. Running without Redis.');
+          if (times <= 3) {
+            this.logger.warn(`Redis retry attempt ${times}/3`);
+          }
+          if (times >= 3) {
+            if (times === 3) {
+              this.logger.error('Redis connection failed after 3 attempts. Running without Redis.');
+            }
             return null; // Stop retrying
           }
           return Math.min(times * 100, 2000);
         },
         enableOfflineQueue: false,
         lazyConnect: true,
+        showFriendlyErrorStack: true,
       };
 
-      this.redisClient = new Redis(redisUrl, redisConfig);
-      this.redisPubClient = new Redis(redisUrl, redisConfig);
+      try {
+        const url = new URL(redisUrl);
+
+        redisConfig.host = url.hostname;
+        redisConfig.port = parseInt(url.port) || 6379;
+
+        if (url.password) {
+          redisConfig.password = url.password;
+          // Log password details to help debug auth issues
+          this.logger.log(`Redis password: ${url.password.length} chars, starts with '${url.password[0]}', ends with '${url.password[url.password.length - 1]}'`);
+        } else {
+          this.logger.warn('No password in REDIS_URL!');
+        }
+
+        // Only set username if explicitly provided (Redis 6+ ACL)
+        if (url.username && url.username !== '' && url.username !== 'default') {
+          redisConfig.username = url.username;
+          this.logger.log(`Redis username: ${url.username}`);
+        } else {
+          this.logger.log('Redis username: (none - password-only auth)');
+        }
+
+        const sanitizedUrl = redisUrl.replace(/:[^:@]+@/, ':***@');
+        this.logger.log(`Initializing Redis: ${sanitizedUrl}`);
+      } catch (parseError) {
+        this.logger.error(`Failed to parse REDIS_URL: ${parseError.message}`);
+        // Fallback to using the URL string directly
+        redisConfig = redisUrl;
+      }
+
+      this.redisClient = new Redis(redisConfig);
+      this.redisPubClient = new Redis(redisConfig);
 
       // Set up error handlers to prevent crashes
       this.redisClient.on('error', (err) => {
-        this.logger.warn(`Redis client error: ${err.message}`);
+        this.logger.error(`Redis error: ${err.message}`);
         this.isConnected = false;
       });
 
-      this.redisClient.on('connect', () => {
-        this.logger.log('Redis client connected');
+      this.redisClient.on('ready', () => {
+        this.logger.log('✓ Redis connected and ready');
         this.isConnected = true;
       });
 
+      this.redisClient.on('close', () => {
+        this.logger.warn('Redis connection closed');
+        this.isConnected = false;
+      });
+
       this.redisPubClient.on('error', (err) => {
-        this.logger.warn(`Redis pub client error: ${err.message}`);
+        this.logger.error(`Redis pub client error: ${err.message}`);
       });
 
       // Try to connect
-      await this.redisClient.connect().catch((err) => {
-        this.logger.warn(`Failed to connect to Redis: ${err.message}`);
+      try {
+        await this.redisClient.connect();
+        await this.redisClient.ping();
+        await this.redisPubClient.connect();
+      } catch (err) {
+        this.logger.error(`Failed to connect to Redis: ${err.message}`);
         this.redisClient = null;
-      });
-
-      if (this.redisClient) {
-        await this.redisPubClient.connect().catch((err) => {
-          this.logger.warn(`Failed to connect Redis pub client: ${err.message}`);
-          this.redisPubClient = null;
-        });
+        this.redisPubClient = null;
       }
     } catch (error) {
-      this.logger.warn(`Redis initialization failed: ${error.message}`);
+      this.logger.error(`Redis initialization error: ${error.message}`);
       this.redisClient = null;
       this.redisPubClient = null;
     }
@@ -119,7 +158,31 @@ export class RedisService {
     const redisUrl = this.configService.get('REDIS_URL');
     if (!redisUrl) return;
 
-    const subClient = new Redis(redisUrl);
+    // Parse Redis URL to use same config as main clients
+    let redisConfig: any;
+    try {
+      const url = new URL(redisUrl);
+      redisConfig = {
+        host: url.hostname,
+        port: parseInt(url.port) || 6379,
+      };
+
+      if (url.password) {
+        redisConfig.password = url.password;
+      }
+
+      // IMPORTANT: Only set username if explicitly provided and not empty
+      if (url.username && url.username !== '' && url.username !== 'default') {
+        redisConfig.username = url.username;
+      }
+
+      this.logger.log(`Creating subscribe client for channel: ${channel}`);
+    } catch (parseError) {
+      this.logger.warn(`Failed to parse REDIS_URL for subscribe: ${parseError.message}`);
+      redisConfig = redisUrl;
+    }
+
+    const subClient = new Redis(redisConfig);
 
     await subClient.subscribe(channel);
     subClient.on('message', (receivedChannel, message) => {

@@ -21,13 +21,14 @@ function createBullModuleImport(): DynamicModule | null {
   const bullRedisUrl = process.env.BULL_REDIS_URL || process.env.REDIS_URL;
 
   if (!bullRedisUrl) {
-    console.log('BULL_REDIS_URL/REDIS_URL not provided. Running without Bull queues.');
+    console.warn('[BullModule] BULL_REDIS_URL/REDIS_URL not provided. Running without Bull queues.');
     return null;
   }
 
   // Parse Redis URL to extract connection details
   try {
     const url = new URL(bullRedisUrl);
+
     const redisConfig: any = {
       host: url.hostname,
       port: parseInt(url.port) || 6379,
@@ -38,16 +39,41 @@ function createBullModuleImport(): DynamicModule | null {
       redisConfig.password = url.password;
     }
 
-    // Add username if present in URL (Redis 6+)
-    if (url.username) {
+    // Add username only if explicitly provided (Redis 6+ ACL)
+    if (url.username && url.username !== '' && url.username !== 'default') {
       redisConfig.username = url.username;
     }
 
+    // Add error handling to prevent Bull from blocking startup or crashing the app
+    redisConfig.lazyConnect = true; // Don't block app startup waiting for Redis
+    redisConfig.maxRetriesPerRequest = 0; // Don't retry individual commands
+    redisConfig.enableReadyCheck = false;
+    redisConfig.enableOfflineQueue = false; // Don't queue commands while disconnected
+    redisConfig.retryStrategy = (times: number) => {
+      // Only log first 3 attempts to avoid spam
+      if (times <= 3) {
+        console.warn(`[BullModule] Redis connection attempt ${times} failed`);
+      }
+      // Stop retrying after 3 attempts
+      if (times >= 3) {
+        if (times === 3) {
+          console.error('[BullModule] Redis unavailable after 3 attempts, stopping retries');
+        }
+        return null; // Stop retrying
+      }
+      return Math.min(times * 100, 2000);
+    };
+
     return BullModule.forRoot({
       redis: redisConfig,
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
     });
   } catch (error) {
-    console.error('Failed to parse BULL_REDIS_URL:', error.message);
+    console.error('[BullModule] ✗ Failed to parse BULL_REDIS_URL:', error.message);
+    console.error('[BullModule] Stack:', error.stack);
     return null;
   }
 }
