@@ -13,11 +13,20 @@ import { CallProcessor } from './processors/call.processor';
 
 // Helper function to conditionally create Bull queue registration
 function createBullQueueRegistration(): DynamicModule | null {
+  console.log('=== KafkaModule Bull Queue Registration ===');
   const bullRedisUrl = process.env.BULL_REDIS_URL || process.env.REDIS_URL;
 
+  console.log(`[KafkaModule] BULL_REDIS_URL: ${process.env.BULL_REDIS_URL ? 'SET' : 'NOT SET'}`);
+  console.log(`[KafkaModule] REDIS_URL: ${process.env.REDIS_URL ? 'SET' : 'NOT SET'}`);
+
   if (!bullRedisUrl) {
+    console.warn('[KafkaModule] No REDIS_URL found, skipping Bull queue registration');
     return null;
   }
+
+  console.log('[KafkaModule] ✓ Redis URL available, registering call-queue with Bull');
+  console.log('[KafkaModule] Queue name: call-queue');
+  console.log('[KafkaModule] This queue will use the Redis config from BullModule.forRoot()');
 
   return BullModule.registerQueue({
     name: 'call-queue',
