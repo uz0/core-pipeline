@@ -72,23 +72,24 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Deploy to ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'Production' || 'Development' }}
+    name: Deploy to ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') || (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'Production' || 'Development' }}
     runs-on: ubuntu-latest
     needs: build-and-push
     environment:
-      name: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'production' || 'development' }}
-      url: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'https://core-pipeline.theedgestory.org' || 'https://core-pipeline.dev.theedgestory.org' }}
+      name: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') || (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'production' || 'development' }}
+      url: ${{ ((github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'https://core-pipeline.theedgestory.org' || 'https://core-pipeline.dev.theedgestory.org' }}
     permissions:
       contents: read
       deployments: write
-    
+
     steps:
       - name: Create deployment record
         id: deployment
         uses: actions/github-script@v7
         with:
           script: |
-            const isProd = context.eventName === 'push' && context.ref === 'refs/heads/main';
+            const isProd = (context.eventName === 'workflow_dispatch' && context.payload.inputs.environment === 'production') ||
+                          (context.eventName === 'push' && context.ref === 'refs/heads/main');
             const environment = isProd ? 'production' : 'development';
             const url = isProd ? 'https://core-pipeline.theedgestory.org' : 'https://core-pipeline.dev.theedgestory.org';
             
