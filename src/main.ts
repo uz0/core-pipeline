@@ -87,14 +87,24 @@ async function bootstrap() {
       }),
     );
 
-    // Enable CORS for the domains
+    // Enable CORS for all *.theedgestory.org domains and localhost
     app.enableCors({
-      origin: [
-        'https://core-pipeline.theedgestory.org',
-        'https://core-pipeline.dev.theedgestory.org',
-        'http://localhost:3000',
-        'http://localhost:3001',
-      ],
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        // Allow all *.theedgestory.org subdomains
+        if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*theedgestory\.org$/)) {
+          return callback(null, true);
+        }
+
+        // Allow localhost
+        if (origin.match(/^http:\/\/localhost(:[0-9]+)?$/)) {
+          return callback(null, true);
+        }
+
+        callback(new Error('Not allowed by CORS'));
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
