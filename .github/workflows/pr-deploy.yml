@@ -42,7 +42,7 @@ jobs:
             
             const branch = pr.head.ref;
             const sha = pr.head.sha.substring(0, 7);
-            const deployUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/deploy.yml`;
+            const deployUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/build.yml`;
             
             // Check if we already commented
             const comments = await github.rest.issues.listComments({
@@ -62,7 +62,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: pr.number,
-                body: `## 🚀 Deploy this branch to development: \`${branch}\`\n\n[Click here to deploy](${deployUrl})\n\n**Note:** Deployments are now managed by Kubero. After triggering the workflow:\n1. Monitor deployment in [GitHub Actions](${deployUrl})\n2. Check deployment status in [Kubero Dashboard](https://dev.theedgestory.org)\n\n### Monitoring & Tools\n[🎛️ Kubero](https://dev.theedgestory.org) | [📊 ArgoCD](https://argo.dev.theedgestory.org/) | [📈 Grafana](https://grafana.dev.theedgestory.org/) | [📨 Kafka](https://kafka.dev.theedgestory.org/) | [🔍 Status](https://status.theedgestory.org/)`
+                body: `## 🚀 Branch: \`${branch}\`\n\n**Note:** Images are automatically built and pushed to GHCR on push to \`main\` or \`develop\` branches. Kubero handles deployments automatically.\n\n### Monitoring & Tools\n[🎛️ Kubero](https://dev.theedgestory.org) | [📊 ArgoCD](https://argo.dev.theedgestory.org/) | [📈 Grafana](https://grafana.dev.theedgestory.org/) | [📨 Kafka](https://kafka.dev.theedgestory.org/) | [🔍 Status](https://status.theedgestory.org/)`
               });
             }
             
@@ -72,7 +72,7 @@ jobs:
               repo: context.repo.repo,
               sha: pr.head.sha,
               state: 'success',
-              context: 'Deploy to Development',
-              description: 'Click Details to deploy this branch',
-              target_url: `${deployUrl}?branch=${branch}`
+              context: 'Kubero Deployment',
+              description: 'Merge to main/develop to trigger deployment',
+              target_url: 'https://dev.theedgestory.org'
             });
