@@ -34,9 +34,11 @@ function createBullModuleImport(): DynamicModule | null {
       port: parseInt(url.port) || 6379,
     };
 
-    // Add password if present in URL
+    // Add password if present in URL or environment variable
     if (url.password) {
       redisConfig.password = url.password;
+    } else if (process.env.REDIS_PASSWORD) {
+      redisConfig.password = process.env.REDIS_PASSWORD;
     }
 
     // Add username only if explicitly provided (Redis 6+ ACL)

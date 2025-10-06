@@ -59,6 +59,9 @@ export class RedisService {
           redisConfig.password = url.password;
           // Log password details to help debug auth issues
           this.logger.log(`Redis password: ${url.password.length} chars, starts with '${url.password[0]}', ends with '${url.password[url.password.length - 1]}'`);
+        } else if (this.configService.get('REDIS_PASSWORD')) {
+          redisConfig.password = this.configService.get('REDIS_PASSWORD');
+          this.logger.log('Using REDIS_PASSWORD from environment');
         } else {
           this.logger.warn('No password in REDIS_URL!');
         }
@@ -169,6 +172,8 @@ export class RedisService {
 
       if (url.password) {
         redisConfig.password = url.password;
+      } else if (this.configService.get('REDIS_PASSWORD')) {
+        redisConfig.password = this.configService.get('REDIS_PASSWORD');
       }
 
       // IMPORTANT: Only set username if explicitly provided and not empty
