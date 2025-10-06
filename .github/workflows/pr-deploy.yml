@@ -62,7 +62,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: pr.number,
-                body: `## 🚀 Deploy this branch to development: \`${branch}\`\n\n[Click here to deploy](${deployUrl})\n\n### Monitoring & Tools\n[📊 ArgoCD](https://argo.dev.theedgestory.org/) | [📈 Grafana](https://grafana.dev.theedgestory.org/) | [📨 Kafka](https://kafka.dev.theedgestory.org/) | [🔍 Status](https://status.theedgestory.org/)`
+                body: `## 🚀 Deploy this branch to development: \`${branch}\`\n\n[Click here to deploy](${deployUrl})\n\n**Note:** Deployments are now managed by Kubero. After triggering the workflow:\n1. Monitor deployment in [GitHub Actions](${deployUrl})\n2. Check deployment status in [Kubero Dashboard](https://dev.theedgestory.org)\n\n### Monitoring & Tools\n[🎛️ Kubero](https://dev.theedgestory.org) | [📊 ArgoCD](https://argo.dev.theedgestory.org/) | [📈 Grafana](https://grafana.dev.theedgestory.org/) | [📨 Kafka](https://kafka.dev.theedgestory.org/) | [🔍 Status](https://status.theedgestory.org/)`
               });
             }
             
